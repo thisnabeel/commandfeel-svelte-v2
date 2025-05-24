@@ -7,6 +7,7 @@
 	export let block;
 	import { user } from '$lib/stores/user';
 	import { loomifiedView } from '$lib/stores/view';
+	import CodeEditor from '../CodeEditor/CodeEditor.svelte';
 
 	let editorRef = null;
 
@@ -159,7 +160,7 @@
 </script>
 
 <div class="main" class:linked={block.prefix_test === true} class:readOnly>
-	<!-- <MonacoEditor
+	<CodeEditor
 		height={lineCount * 18 + 'px'}
 		defaultLanguage={language.editor_slug}
 		onMount={handleEditorDidMount}
@@ -172,7 +173,7 @@
 		options={{
 			minimap: { enabled: false }
 		}}
-	/> -->
+	/>
 
 	{#if $user && $user.admin && !$loomifiedView}
 		<div class="btn btn-primary locker" on:click={blockCode}><i class="fa fa-lock" /></div>

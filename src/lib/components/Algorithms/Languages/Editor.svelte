@@ -1,5 +1,6 @@
 <script>
 	import Api from '$lib/api/api';
+	import CodeEditor from '$lib/components/CodeEditor/CodeEditor.svelte';
 	// import MonacoEditor from 'monaco-editor';
 
 	export let language;
@@ -22,11 +23,7 @@
 </script>
 
 <div class="holder">
-	<!-- <MonacoEditor
-		height="30vh"
-		defaultLanguage={language.editor_slug}
-		onChange={handleEditorChange}
-	/> -->
+	<CodeEditor height="30vh" defaultLanguage={language.editor_slug} onChange={handleEditorChange} />
 </div>
 
 <div class="btn btn-info btn-block btn-lg" style="display:block;" on:click={test}>Run</div>

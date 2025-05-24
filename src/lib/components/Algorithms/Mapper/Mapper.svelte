@@ -4,7 +4,7 @@
 	import { selectAlgorithm, wondersMap } from '$lib/stores/main';
 	import Row from './Row.svelte';
 	import { selectedAlgorithm } from '$lib/stores/algorithms/mapper';
-	import { listen } from 'svelte/internal';
+
 	import sticky from '$lib/functions/sticky.js';
 
 	let isStuck = false;

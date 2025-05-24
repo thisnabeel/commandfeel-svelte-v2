@@ -8,7 +8,7 @@
 		selectedChapter
 	} from '$lib/components/Chapters/store.js';
 	import Row from './Row.svelte';
-	import { listen } from 'svelte/internal';
+
 	import sticky from '$lib/functions/sticky.js';
 
 	let isStuck = false;

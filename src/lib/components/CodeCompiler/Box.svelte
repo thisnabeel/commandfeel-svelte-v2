@@ -7,6 +7,7 @@
 	import API from '$lib/api/api';
 	import { loomifiedView } from '$lib/stores/view';
 	import TestCases from './TestCases/TestCases.svelte';
+	import CodeEditor from '../CodeEditor/CodeEditor.svelte';
 
 	// import MonacoEditor from 'monaco-editor';
 
@@ -162,7 +163,7 @@
 {#if (!algorithm && trait) || (!algorithm && fetched_trait)}
 	{#if fetched_trait}
 		<div class="holder">
-			<!-- <MonacoEditor
+			<CodeEditor
 				height={lineCount * 18 + 18 + 'px'}
 				defaultLanguage={language.editor_slug}
 				onChange={handleEditorChange}
@@ -173,11 +174,11 @@
 				options={{
 					minimap: { enabled: false }
 				}}
-			/> -->
+			/>
 		</div>
 	{:else}
 		<div class="holder">
-			<!-- <MonacoEditor
+			<CodeEditor
 				height={lineCount * 18 + 18 + 'px'}
 				defaultLanguage={language.editor_slug}
 				onChange={handleEditorChange}
@@ -188,7 +189,7 @@
 				options={{
 					minimap: { enabled: false }
 				}}
-			/> -->
+			/>
 		</div>
 	{/if}
 {:else if algorithm}
@@ -264,7 +265,7 @@
 
 {#if !algorithm}
 	<div class="holder">
-		<!-- <MonacoEditor
+		<CodeEditor
 			height={lineCount * 18 + 18 + 'px'}
 			defaultLanguage={language.editor_slug}
 			onChange={handleEditorChange}
@@ -275,7 +276,7 @@
 			options={{
 				minimap: { enabled: false }
 			}}
-		/> -->
+		/>
 	</div>
 {/if}
 

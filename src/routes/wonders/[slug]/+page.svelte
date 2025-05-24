@@ -1,7 +1,6 @@
 <script>
 	import { onMount } from 'svelte';
 	import Api from '$lib/api/api.js';
-	import { each } from 'svelte/internal';
 	import { wonders } from '$lib/stores/main';
 
 	import { page } from '$app/stores';

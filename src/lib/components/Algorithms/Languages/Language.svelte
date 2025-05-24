@@ -66,7 +66,7 @@
 		? starter
 		: algorithm.language_algorithm_starters.filter(
 				(s) => s.programming_language_id === language.id
-		  ) || null;
+			) || null;
 </script>
 
 <li class="language" class:open>
@@ -166,7 +166,9 @@
 						{#if $user && $user.admin}
 							<i class="fa fa-times remove-trait" on:click={() => removeTrait(obj)} />
 						{/if}
+
 						{#if selectedHelperTrait && selectedHelperTrait.id === obj.id}
+							<h1>CodeBox</h1>
 							<CodeBox
 								fetched_trait={selectedHelperTrait}
 								{language}

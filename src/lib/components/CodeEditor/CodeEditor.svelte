@@ -1,7 +1,8 @@
 <script lang="ts">
-	import { onMount, onDestroy, createEventDispatcher } from 'svelte';
+	import { onDestroy, createEventDispatcher } from 'svelte';
+	import { browser } from '$app/environment';
 	import type * as Monaco from 'monaco-editor/esm/vs/editor/editor.api';
-	import monaco from '$lib/monaco';
+	let monaco: typeof import('$lib/monaco').default;
 
 	export let height: string = '600px';
 	export let defaultLanguage: string = 'javascript';
@@ -20,7 +21,16 @@
 
 	const dispatch = createEventDispatcher();
 
-	onMount(() => {
+	$: {
+		if (browser && editorContainer) {
+			initEditor();
+		}
+	}
+
+	async function initEditor() {
+		// Dynamically import monaco only on the client side
+		monaco = (await import('$lib/monaco')).default;
+
 		const model = monaco.editor.createModel(defaultValue, defaultLanguage);
 
 		editor = monaco.editor.create(editorContainer, {
@@ -41,11 +51,13 @@
 		});
 
 		onMount(editor);
-	});
+	}
 
 	onDestroy(() => {
-		editor?.dispose();
-		monaco.editor.getModels().forEach((model) => model.dispose());
+		if (browser) {
+			editor?.dispose();
+			monaco?.editor.getModels().forEach((model) => model.dispose());
+		}
 	});
 </script>
 

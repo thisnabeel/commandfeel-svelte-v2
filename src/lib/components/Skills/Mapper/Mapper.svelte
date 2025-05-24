@@ -4,7 +4,6 @@
 	import { selectSkill, skillsMap, wondersMap } from '$lib/stores/main';
 	import Row from './Row.svelte';
 	import { selectedSkill } from '$lib/stores/skills/mapper';
-	import { listen } from 'svelte/internal';
 	import sticky from '$lib/functions/sticky.js';
 
 	let isStuck = false;
