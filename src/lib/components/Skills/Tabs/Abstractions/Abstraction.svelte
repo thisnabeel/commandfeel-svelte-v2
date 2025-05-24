@@ -6,6 +6,7 @@
 	export let user;
 	export let abstraction;
 	export let removeAbstraction = () => {};
+	export let makeQuestFromAbstraction = () => {};
 	export let skill;
 
 	const destroy = async (item) => {
@@ -39,6 +40,7 @@
 			>{@html abstraction.body}</span
 		>
 		<span class="fa fa-trash" on:click={() => destroy(abstraction)} />
+		<span class="fa fa-bolt" on:click={() => makeQuestFromAbstraction(abstraction)} />
 	{:else}
 		<span>{@html abstraction.body}</span>
 	{/if}
@@ -66,6 +68,12 @@
 	.fa-trash {
 		position: absolute;
 		left: -7%;
+		top: 39%;
+	}
+
+	.fa-bolt {
+		position: absolute;
+		right: -7%;
 		top: 39%;
 	}
 

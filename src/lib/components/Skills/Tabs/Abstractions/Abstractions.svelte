@@ -1,10 +1,13 @@
 <script>
 	export let skill;
 	import { user } from '$lib/stores/user';
+	import { goto } from '$app/navigation';
 
 	import Abstraction from './Abstraction.svelte';
 
 	import Api from '$lib/api/api';
+	import Swal from 'sweetalert2';
+	import API from '$lib/api/api';
 	async function handleRemoveAbstraction(payload) {
 		console.log({ payload });
 		await Api.delete('/abstractions/' + payload.id + '.json');
@@ -30,6 +33,71 @@
 		skill.abstractions = [...skill.abstractions, response];
 	};
 
+	async function createQuest(abstraction) {
+		try {
+			const { value: title } = await Swal.fire({
+				title: 'Enter Quest Title',
+				input: 'text',
+				inputPlaceholder: 'Enter the title for your quest...',
+				showCancelButton: true,
+				inputValidator: (value) => {
+					if (!value) {
+						return 'You need to write something!';
+					}
+				}
+			});
+
+			if (!title) return; // User cancelled or closed the dialog
+
+			Swal.fire('Building Quest...');
+
+			const quest = await API.post(`/skills/${skill.id}/quests`, {
+				title: title,
+				description: `a ${title} adventure`,
+				position: 0,
+				skill_id: skill.id,
+				image_url: '',
+				difficulty: 1
+			});
+
+			try {
+				await API.post(`/quests/${quest.id}/quest_wizard`, {
+					level: 'beginner',
+					abstraction: abstraction.body
+				});
+				await Swal.fire({
+					icon: 'success',
+					title: 'Quest Created!',
+					text: 'Your quest is now ready to play',
+					showCancelButton: true,
+					confirmButtonText: 'Play Now',
+					cancelButtonText: 'Close',
+					confirmButtonColor: '#28a745'
+				}).then((result) => {
+					if (result.isConfirmed) {
+						goto(`/quests/${quest.id}/play`);
+					}
+				});
+			} catch (err) {
+				const error = err.message || 'Failed to generate quest steps';
+				await Swal.fire({
+					icon: 'error',
+					title: 'Oops...',
+					text: error
+				});
+			}
+			return quest;
+		} catch (err) {
+			const error = err.message || 'An error occurred while creating quest';
+			console.log('error', error);
+		}
+	}
+	async function makeQuestFromAbstraction(abstraction) {
+		console.log('makeQuestFromAbstraction', abstraction);
+		Swal.fire('Building Quest...');
+		createQuest(abstraction);
+	}
+
 	let requested = false;
 </script>
 
@@ -50,6 +118,7 @@
 					{abstraction}
 					user={$user}
 					removeAbstraction={handleRemoveAbstraction}
+					{makeQuestFromAbstraction}
 				/>
 			</li>
 		{/each}
