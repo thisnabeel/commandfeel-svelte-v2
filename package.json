@@ -50,6 +50,7 @@
 	"dependencies": {
 		"@fortawesome/free-brands-svg-icons": "^6.7.2",
 		"@fortawesome/free-solid-svg-icons": "^6.7.2",
+		"@sveltejs/adapter-vercel": "^5.7.2",
 		"axios": "^1.9.0",
 		"cl-editor": "^2.3.0",
 		"codemirror": "^6.0.1",
