@@ -1,6 +1,7 @@
 import { readable, writable } from 'svelte/store';
 
 export const globalViewCategory = writable('Languages');
+export const layoutClass = writable('defaultView');
 
 export const loomifiedView = writable(false);
 

@@ -1,9 +1,10 @@
 <script>
-	import { onMount } from 'svelte';
+	import { onDestroy, onMount } from 'svelte';
 	import { page } from '$app/stores';
 	import API from '$lib/api/api';
 	import { fade, scale } from 'svelte/transition';
 	import { user } from '$lib/stores/user';
+	import { layoutClass } from '$lib/stores/view';
 
 	let typingAudio;
 	let correctAudio;
@@ -26,6 +27,7 @@
 	let cancelled = false;
 
 	onMount(() => {
+		layoutClass.set('questView');
 		typingAudio = new Audio('/sounds/typing.mp3');
 		typingAudio.loop = true;
 		typingAudio.volume = 0.5;
@@ -35,6 +37,10 @@
 
 		wrongAudio = new Audio('/failing.mp3');
 		wrongAudio.volume = 0.5;
+	});
+
+	onDestroy(() => {
+		layoutClass.set('defaultView');
 	});
 
 	page.subscribe(($page) => {
@@ -287,11 +293,13 @@
 		max-width: 700px;
 	}
 
-	:global(body) {
-		background-color: #201f1f !important;
+	:global(.questView .wrapper) {
+		width: 100vw;
+		position: absolute;
+		left: 0;
 	}
 
-	:global(header) {
+	:global(.questView header) {
 		display: none;
 	}
 
@@ -363,10 +371,18 @@
 		color: #fff !important;
 	}
 
-	:global(body) {
+	:global(.questView .wrapper) {
 		background: #41295a;
 		background: -webkit-linear-gradient(to right, #2f0743, #41295a);
 		background-image: linear-gradient(to right, #2f0743, #41295a) !important;
+	}
+
+	:global(.questView .guide-btn, .guide) {
+		display: none;
+	}
+
+	:global(.questView .nav-circle, .show-menu) {
+		background-color: transparent !important;
 	}
 
 	.reasoning-container {

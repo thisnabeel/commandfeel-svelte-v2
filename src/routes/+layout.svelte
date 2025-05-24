@@ -8,7 +8,7 @@
 	import Api from '$lib/api/api.js';
 	import { csrf_token } from '$lib/stores/api.js';
 	import { user } from '$lib/stores/user';
-	import { currentPage, showGuideButton } from '$lib/stores/view';
+	import { currentPage, showGuideButton, layoutClass } from '$lib/stores/view';
 
 	import GaragePopUp from '$lib/pop-ups/Garage.svelte';
 
@@ -36,7 +36,7 @@
 	<meta name="csrf-token" content={csrf} />
 </svelte:head>
 
-<main>
+<main class={$layoutClass}>
 	<NavButtons />
 	<Header />
 	<slot />
