@@ -27,7 +27,7 @@
 					</span>
 					<span class="in-lang">
 						<i class="fa fa-compass" aria-hidden="true" />
-						{item.title}
+						{item.skill.title}
 					</span>
 				</a>
 				{#if $user && $user.admin}
