@@ -129,5 +129,15 @@
 		.abstractions .has_video {
 			padding-top: 55px;
 		}
+
+		.fa-bolt {
+			right: 10px;
+			top: 20px;
+		}
+
+		.fa-trash {
+			left: 10px;
+			top: 20px;
+		}
 	}
 </style>

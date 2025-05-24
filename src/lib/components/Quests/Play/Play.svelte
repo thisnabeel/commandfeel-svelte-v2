@@ -5,6 +5,7 @@
 	import { fade, scale } from 'svelte/transition';
 	import { user } from '$lib/stores/user';
 	import { layoutClass } from '$lib/stores/view';
+	import { goto } from '$app/navigation';
 
 	let typingAudio;
 	let correctAudio;
@@ -171,6 +172,10 @@
 			}
 		}
 	}
+
+	function finishQuest() {
+		goto(`/skills/${quest.skill_slug}`);
+	}
 </script>
 
 <div class="wrapper">
@@ -251,18 +256,32 @@
 
 							{#if selectedChoice?.status}
 								<div class="next-button-container" transition:fade>
-									<button class="btn btn-success next-btn" on:click={goToNextStep}>
-										<span>Next</span>
-										<i class="fa fa-arrow-right" />
-									</button>
+									{#if currentStep.success_step_id}
+										<button class="btn btn-success next-btn" on:click={goToNextStep}>
+											<span>Next</span>
+											<i class="fa fa-arrow-right" />
+										</button>
+									{:else}
+										<button class="btn btn-success next-btn finish-btn" on:click={finishQuest}>
+											<span>Finish Quest</span>
+											<i class="fa fa-flag-checkered" />
+										</button>
+									{/if}
 								</div>
 							{/if}
 						{:else}
 							<div class="next-button-container" transition:fade>
-								<button class="btn btn-success next-btn" on:click={goToNextStep}>
-									<span>Continue</span>
-									<i class="fa fa-arrow-right" />
-								</button>
+								{#if currentStep.success_step_id}
+									<button class="btn btn-success next-btn" on:click={goToNextStep}>
+										<span>Continue</span>
+										<i class="fa fa-arrow-right" />
+									</button>
+								{:else}
+									<button class="btn btn-success next-btn finish-btn" on:click={finishQuest}>
+										<span>Finish Quest</span>
+										<i class="fa fa-flag-checkered" />
+									</button>
+								{/if}
 							</div>
 						{/if}
 					</div>
@@ -456,5 +475,14 @@
 
 	.next-btn i {
 		font-size: 1rem;
+	}
+
+	.finish-btn {
+		background-color: #ffd700 !important; /* Gold color for finish */
+		color: #000 !important;
+	}
+
+	.finish-btn:hover {
+		background-color: #ffed4a !important;
 	}
 </style>

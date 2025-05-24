@@ -45,8 +45,8 @@
 		selectedQuest = quest;
 		loadingSteps = true;
 		try {
-			const endpoint = skillId
-				? `/skills/${skillId}/quests/${quest.id}/quest_steps`
+			const endpoint = quest.skill_id
+				? `/skills/${quest.skill_id}/quests/${quest.id}/quest_steps`
 				: `/quests/${quest.id}/quest_steps`;
 			questSteps = await API.get(endpoint);
 		} catch (err) {
@@ -80,8 +80,8 @@
 	async function updateStep() {
 		if (!selectedQuest || !editingStep) return;
 		try {
-			const endpoint = skillId
-				? `/skills/${skillId}/quests/${selectedQuest.id}/quest_steps/${editingStep.id}`
+			const endpoint = quest.skill_id
+				? `/skills/${quest.skill_id}/quests/${selectedQuest.id}/quest_steps/${editingStep.id}`
 				: `/quests/${selectedQuest.id}/quest_steps/${editingStep.id}`;
 			await API.put(endpoint, { quest_step: editingStep });
 			const index = questSteps.findIndex((s) => s.id === editingStep.id);
@@ -240,7 +240,7 @@
 							<span>Hard</span>
 						</button>
 					</div>
-					<div class="text-center mt-4">
+					<div class="mt-4 text-center">
 						<p class="text-muted">Or create steps manually below</p>
 					</div>
 				</div>
