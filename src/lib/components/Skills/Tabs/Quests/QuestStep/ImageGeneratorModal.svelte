@@ -10,8 +10,9 @@
 
 	let selectedWords: string[] = [];
 	let words: string[] = [];
+	let customPrompt: string = '';
 
-	$: prompt = 'illustration style: ' + selectedWords.join(' ');
+	$: prompt = 'modern cheery illustration style: ' + (customPrompt || selectedWords.join(' '));
 
 	onMount(() => {
 		document.body.style['overflow-y'] = 'hidden';
@@ -53,10 +54,18 @@
 				<div class="contents">
 					<h2>Generate Image from Words</h2>
 					<div class="selected-words">
-						{#if selectedWords.length > 0}
+						<div class="custom-prompt-input">
+							<input
+								type="text"
+								bind:value={customPrompt}
+								placeholder="Type your own prompt or select words below"
+								class="form-control"
+							/>
+						</div>
+						{#if selectedWords.length > 0 && !customPrompt}
 							<p>Selected Prompt: <strong>{prompt}</strong></p>
-						{:else}
-							<p>Click words below to build your image prompt</p>
+						{:else if !customPrompt}
+							<p>Type your own prompt above or click words below</p>
 						{/if}
 					</div>
 					<div class="word-bank">
@@ -77,7 +86,7 @@
 						<button
 							class="btn btn-success"
 							on:click={handleSubmit}
-							disabled={selectedWords.length === 0}
+							disabled={selectedWords.length === 0 && !customPrompt}
 						>
 							Generate Image
 						</button>
@@ -156,5 +165,23 @@
 		display: flex;
 		justify-content: flex-end;
 		gap: 1em;
+	}
+
+	.custom-prompt-input {
+		margin-bottom: 1em;
+	}
+
+	.custom-prompt-input input {
+		width: 100%;
+		padding: 0.75rem;
+		border: 1px solid #dee2e6;
+		border-radius: 8px;
+		font-size: 1rem;
+	}
+
+	.custom-prompt-input input:focus {
+		outline: none;
+		border-color: #28a745;
+		box-shadow: 0 0 0 0.2rem rgba(40, 167, 69, 0.25);
 	}
 </style>

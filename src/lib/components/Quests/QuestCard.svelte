@@ -148,9 +148,11 @@
 		const formData = new FormData();
 		formData.append('file', file);
 
+		console.log({ skillId }, { selectedQuest });
+
 		try {
-			const endpoint = skillId
-				? `/skills/${skillId}/quests/${selectedQuest.id}/quest_steps/${step.id}/upload_image`
+			const endpoint = selectedQuest.skill_id
+				? `/skills/${selectedQuest.skill_id}/quests/${selectedQuest.id}/quest_steps/${step.id}/upload_image`
 				: `/quests/${selectedQuest.id}/quest_steps/${step.id}/upload_image`;
 			const res = await API.post(endpoint, formData);
 

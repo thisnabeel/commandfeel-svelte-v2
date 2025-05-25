@@ -174,7 +174,7 @@
 	}
 
 	function finishQuest() {
-		goto(`/skills/${quest.skill_slug}`);
+		goto(`/skills/${quest.skill.slug}`);
 	}
 </script>
 

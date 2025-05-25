@@ -10,11 +10,15 @@
 		console.log('popular quests', response);
 		quests = response;
 	});
+
+	$: filteredQuests = $user?.admin
+		? quests
+		: quests.filter((item) => item.cover || item.steps.find((s) => s.image_url));
 </script>
 
-{#if quests.length > 0}
+{#if filteredQuests.length > 0}
 	<div class="masonry-container">
-		{#each quests as item}
+		{#each filteredQuests as item}
 			<div class="box">
 				<a class="clean-a" target="_blank" href="/quests/{item.id}/play">
 					<img

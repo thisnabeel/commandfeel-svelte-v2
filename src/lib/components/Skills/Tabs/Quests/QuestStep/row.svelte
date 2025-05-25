@@ -59,7 +59,7 @@
 			// Show the generated image and ask for confirmation
 			const result = await Swal.fire({
 				title: 'Generated Image',
-				imageUrl: data.output[0],
+				imageUrl: data.imageUrl,
 				imageWidth: 400,
 				imageHeight: 400,
 				showCancelButton: true,
@@ -69,7 +69,7 @@
 
 			if (result.isConfirmed) {
 				// Create a fake file event to use the existing image upload handler
-				const response = await fetch(data.output[0]);
+				const response = await fetch(data.imageUrl);
 				const blob = await response.blob();
 				const file = new File([blob], 'generated-image.png', { type: 'image/png' });
 
