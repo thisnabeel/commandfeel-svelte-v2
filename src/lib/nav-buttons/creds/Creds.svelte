@@ -1,7 +1,7 @@
 <script>
 	import Api from '$lib/api/api';
 	import { goto } from '$app/navigation';
-	import { user } from '$lib/stores/user';
+	import { user, credsView } from '$lib/stores/user';
 
 	let username;
 	let email;
@@ -37,11 +37,9 @@
 			// goto(`/`);
 		}
 	};
-
-	let view = 'signIn';
 </script>
 
-{#if view === 'signIn'}
+{#if $credsView === 'signIn'}
 	<div class="form">
 		<img src="/sign-in.png" alt="" class="sign-up-img creds-header-img" />
 
@@ -53,7 +51,7 @@
 
 		<button on:click={() => authenticate('signIn')}>Log In</button>
 		<hr />
-		<div class="text-center" on:click={() => (view = 'signUp')}>
+		<div class="text-center" on:click={() => credsView.set('signUp')}>
 			<span>Sign Up</span>
 		</div>
 	</div>
@@ -75,7 +73,7 @@
 
 		<button on:click={() => authenticate('signUp')}>Sign Up</button>
 		<hr />
-		<div class="text-center" on:click={() => (view = 'signIn')}>
+		<div class="text-center" on:click={() => credsView.set('signIn')}>
 			<span>Log In</span>
 		</div>
 	</div>
@@ -87,8 +85,11 @@
 		margin: 30px auto;
 		background: #fff;
 		padding: 30px;
-		border-radius: 6px;
+		border-radius: 12px;
 		border: 9px solid #f6f8ff;
+		box-shadow:
+			0 10px 25px rgba(0, 0, 0, 0.1),
+			0 6px 12px rgba(0, 0, 0, 0.08);
 	}
 
 	img.creds-header-img {
@@ -102,6 +103,9 @@
 		font-family: GreyCliffCF-Regular;
 		color: rgb(49, 49, 49);
 		border: solid 1px #ccc;
+		border-radius: 6px;
+		padding: 8px 12px;
+		margin: 4px 0 12px 0;
 	}
 
 	button {
@@ -118,6 +122,19 @@
 		background-clip: padding-box;
 		border: 1px solid #ced4da;
 		border-radius: 0.25rem;
-		transition: border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
+		transition:
+			border-color 0.15s ease-in-out,
+			box-shadow 0.15s ease-in-out;
+	}
+
+	@media (max-width: 768px) {
+		.form {
+			margin: 20px auto;
+			padding: 25px;
+			border-width: 6px;
+			box-shadow:
+				0 15px 35px rgba(0, 0, 0, 0.15),
+				0 8px 16px rgba(0, 0, 0, 0.12);
+		}
 	}
 </style>

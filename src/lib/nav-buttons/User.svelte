@@ -5,7 +5,7 @@
 	import CredsPopUp from './creds/Creds.svelte';
 	import MediaQuery from '$lib/MediaQuery/MediaQuery.svelte';
 	import { showGuide } from '$lib/stores/view';
-
+	import { credsView } from '$lib/stores/user';
 	let btn;
 
 	let user_signed_in;
@@ -18,7 +18,6 @@
 	};
 
 	let showSettings = false;
-	let showLogIn = false;
 </script>
 
 <aside class="user">
@@ -37,18 +36,26 @@
 			</span>
 		{/if}
 	{:else}
-		<span on:click={() => (showLogIn = !showLogIn)}>
+		<span
+			on:click={() => {
+				if ($credsView) {
+					credsView.set(null);
+				} else {
+					credsView.set('signIn');
+				}
+			}}
+		>
 			<Button icon="fa-user" />
 		</span>
 
-		{#if $showGuide && !showLogIn}
+		{#if $showGuide && !$credsView}
 			<div class="guide user">
 				<i class="fa fa-arrow-up" /> Sign In/Up here
 			</div>
 		{/if}
-		{#if showLogIn}
+		{#if $credsView}
 			<div class="creds-pop">
-				<CredsPopUp hidePopUp={() => (showLogIn = !showLogIn)} />
+				<CredsPopUp hidePopUp={() => credsView.set(null)} />
 			</div>
 		{/if}
 	{/if}
@@ -56,12 +63,12 @@
 
 <style>
 	.creds-pop {
-		position: absolute;
+		position: fixed;
 		width: 240px;
 		z-index: 9999;
 		cursor: auto;
-		right: -120px;
-		top: 30px;
+		right: 1em;
+		top: 4.1em;
 	}
 	aside {
 		cursor: pointer;
@@ -119,7 +126,6 @@
 		}
 
 		.creds-pop {
-			right: -3.5em;
 		}
 	}
 </style>

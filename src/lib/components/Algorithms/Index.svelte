@@ -62,61 +62,64 @@
 	}
 </script>
 
-<div class="top-nav flex">
-	<h1 class:activeTab={mainView === 'algos'} on:click={() => (mainView = 'algos')}>Problems</h1>
-	<h1 class:activeTab={mainView === 'languages'} on:click={() => (mainView = 'languages')}>
-		Languages
-	</h1>
-</div>
-<hr />
+{#if $user && $user.admin}
+	<div class="top-nav flex">
+		<h1 class:activeTab={mainView === 'algos'} on:click={() => (mainView = 'algos')}>Problems</h1>
+		<h1 class:activeTab={mainView === 'languages'} on:click={() => (mainView = 'languages')}>
+			Languages
+		</h1>
+	</div>
 
-{#if mainView === 'algos'}
-	{#if $showGuide && !$loomifiedView && userLevel < 0}
-		<h3 class="text-center">Select your Level:</h3>
-		<div class="flex">
-			<!-- svelte-ignore a11y-click-events-have-key-events -->
-			<div
-				class="btn btn-lg btn-danger"
-				on:click={() => {
-					getAlgos();
-					userLevel = 1;
-					// modals.open(GuideModal, { slug: 'algorithm page: can program, new to commandfeel' });
-				}}
-			>
-				I have never programmed before!
-			</div>
-			<!-- svelte-ignore a11y-click-events-have-key-events -->
-			<div
-				class="btn btn-lg btn-info"
-				on:click={() => {
-					getAlgos();
-					userLevel = 1;
-					// modals.open(GuideModal, { slug: 'algorithm page: can program, new to commandfeel' });
-				}}
-			>
-				I can program, show me the Challenges!
-			</div>
-		</div>
-	{/if}
+	<hr />
 
-	{#if userLevel === 1}
-		{#if $user && $user.admin}
-			<input type="text" class="form-control" bind:value={title} />
-			<div class="btn btn-info" on:click={addAlgo}>Add</div>
-			<hr />
+	{#if mainView === 'algos'}
+		{#if $showGuide && !$loomifiedView && userLevel < 0}
+			<h3 class="text-center">Select your Level:</h3>
+			<div class="flex">
+				<!-- svelte-ignore a11y-click-events-have-key-events -->
+				<div
+					class="btn btn-lg btn-danger"
+					on:click={() => {
+						getAlgos();
+						userLevel = 1;
+						// modals.open(GuideModal, { slug: 'algorithm page: can program, new to commandfeel' });
+					}}
+				>
+					I have never programmed before!
+				</div>
+				<!-- svelte-ignore a11y-click-events-have-key-events -->
+				<div
+					class="btn btn-lg btn-info"
+					on:click={() => {
+						getAlgos();
+						userLevel = 1;
+						// modals.open(GuideModal, { slug: 'algorithm page: can program, new to commandfeel' });
+					}}
+				>
+					I can program, show me the Challenges!
+				</div>
+			</div>
 		{/if}
 
-		<!-- {#if $user && $user.admin}
+		{#if userLevel === 1}
+			{#if $user && $user.admin}
+				<input type="text" class="form-control" bind:value={title} />
+				<div class="btn btn-info" on:click={addAlgo}>Add</div>
+				<hr />
+			{/if}
+
+			<!-- {#if $user && $user.admin}
 			<Mapper algorithms={algos} />
 		{:else}
 			{#each algos.filter((algo) => algo.expected_with_type !== null) as algo, index}
 				<Algorithm algorithm={algo} {index} />
 			{/each}
 		{/if} -->
-		<Mapper algorithms={algos} readOnly={!$user || !$user.admin} />
-	{/if}
+			<Mapper algorithms={algos} readOnly={!$user || !$user.admin} />
+		{/if}
 
-	<br />
+		<br />
+	{/if}
 {/if}
 
 {#if mainView === 'languages'}

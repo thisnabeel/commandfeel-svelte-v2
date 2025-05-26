@@ -183,7 +183,7 @@
 		{#if !started}
 			<div class="text-center">
 				{#if quest}
-					<div class="title">{quest.title}</div>
+					<div class="title">{quest.skill.title}</div>
 
 					{#if questSteps.length > 0}
 						<button

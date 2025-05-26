@@ -2,38 +2,75 @@
 	import { onMount } from 'svelte';
 	import Api from '$lib/api/api';
 	import { user } from '$lib/stores/user';
+	import { credsView } from '$lib/stores/user';
+	import Swal from 'sweetalert2';
+	import { goto } from '$app/navigation';
 
 	let quests = [];
+	let loading = true;
 
 	onMount(async () => {
-		const response = await Api.get('/quests/popular');
-		console.log('popular quests', response);
-		quests = response;
+		let url = '/quests/popular';
+		if ($user?.admin) {
+			url = '/quests/popular?admin=true';
+		}
+		try {
+			const response = await Api.get(url);
+			console.log('popular quests', response);
+			quests = response;
+		} finally {
+			loading = false;
+		}
 	});
+
+	async function handleQuestClick(questId) {
+		if (!$user) {
+			const result = await Swal.fire({
+				title: 'Quick Sign Up Required',
+				text: 'Sign up for free in seconds to start playing this quest!',
+				icon: 'info',
+				showCancelButton: true,
+				confirmButtonText: 'Sign Up',
+				cancelButtonText: 'Maybe Later',
+				confirmButtonColor: '#3085d6',
+				cancelButtonColor: '#d33'
+			});
+
+			if (result.isConfirmed) {
+				credsView.set('signUp');
+			}
+		} else {
+			goto(`/quests/${questId}/play`);
+		}
+	}
 
 	$: filteredQuests = $user?.admin
 		? quests
 		: quests.filter((item) => item.cover || item.steps.find((s) => s.image_url));
 </script>
 
-{#if filteredQuests.length > 0}
+{#if loading}
+	<div class="loading-container">
+		<p class="loading-text">Loading Interactive Quests...</p>
+	</div>
+{:else if filteredQuests.length > 0}
 	<div class="masonry-container">
 		{#each filteredQuests as item}
 			<div class="box">
-				<a class="clean-a" target="_blank" href="/quests/{item.id}/play">
+				<button class="quest-button clean-a" on:click={() => handleQuestClick(item.id)}>
 					<img
 						class="cover"
 						src={item.cover || item.steps.find((s) => s.image_url)?.image_url}
 						alt="cover image"
 					/>
-					<span class="objective">
+					<!-- <span class="objective">
 						<span class="english">{item.title}</span>
-					</span>
+					</span> -->
 					<span class="in-lang">
 						<i class="fa fa-compass" aria-hidden="true" />
 						{item.skill.title}
 					</span>
-				</a>
+				</button>
 				{#if $user && $user.admin}
 					<a href="/quests/{item.id}/edit" class="btn btn-block btn-warning">Edit</a>
 				{/if}
@@ -108,5 +145,20 @@
 		color: #000;
 		background-color: #ffc107;
 		border-color: #ffc107;
+	}
+
+	.quest-button {
+		width: 100%;
+		padding: 0;
+		border: none;
+		background: none;
+		cursor: pointer;
+		text-align: left;
+		display: block;
+	}
+
+	.quest-button:hover {
+		transform: translateY(-2px);
+		transition: transform 0.2s ease;
 	}
 </style>

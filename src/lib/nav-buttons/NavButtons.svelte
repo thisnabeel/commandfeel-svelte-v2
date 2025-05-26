@@ -47,34 +47,46 @@
 			{/if}
 			<li on:click={() => visit(`/`)}>Home</li>
 			<!-- svelte-ignore a11y-click-events-have-key-events -->
-			<li on:click={() => visit(`/cd/${username}`)} class:activeTab={$currentPage === 'portfolio'}>
-				My Portfolio
-			</li>
-			<!-- svelte-ignore a11y-click-events-have-key-events -->
-			<li
-				on:click={() => {
-					visit('/');
-					globalViewCategory.set('Skills');
-				}}
-				class:activeTab={$currentPage === 'popQuiz'}
-			>
-				Pop Quiz
-			</li>
-			<!-- svelte-ignore a11y-click-events-have-key-events -->
-			<li on:click={() => visit('/my_study_list')} class:activeTab={$currentPage === 'myStudyList'}>
-				My Study List
-			</li>
-			<!-- svelte-ignore a11y-click-events-have-key-events -->
-			<li on:click={() => visit('/my_jobs')} class:activeTab={$currentPage === 'myJobs'}>
-				My Jobs
-			</li>
-			<!-- svelte-ignore a11y-click-events-have-key-events -->
-			<li on:click={() => visit('/algorithms')} class:activeTab={$currentPage === 'algorithms'}>
-				Coding Challenges
-			</li>
 
-			<li on:click={() => visit('/tradeoffs')} class:activeTab={$currentPage === 'tradeoffs'}>
-				Tradeoffs
+			{#if $user && $user.admin}
+				<li
+					on:click={() => visit(`/cd/${username}`)}
+					class:activeTab={$currentPage === 'portfolio'}
+				>
+					My Portfolio
+				</li>
+				<!-- svelte-ignore a11y-click-events-have-key-events -->
+				<li
+					on:click={() => {
+						visit('/');
+						globalViewCategory.set('Skills');
+					}}
+					class:activeTab={$currentPage === 'popQuiz'}
+				>
+					Pop Quiz
+				</li>
+				<!-- svelte-ignore a11y-click-events-have-key-events -->
+				<li
+					on:click={() => visit('/my_study_list')}
+					class:activeTab={$currentPage === 'myStudyList'}
+				>
+					My Study List
+				</li>
+				<!-- svelte-ignore a11y-click-events-have-key-events -->
+				<li on:click={() => visit('/my_jobs')} class:activeTab={$currentPage === 'myJobs'}>
+					My Jobs
+				</li>
+				<!-- svelte-ignore a11y-click-events-have-key-events -->
+				<li on:click={() => visit('/algorithms')} class:activeTab={$currentPage === 'algorithms'}>
+					Coding Challenges
+				</li>
+
+				<li on:click={() => visit('/tradeoffs')} class:activeTab={$currentPage === 'tradeoffs'}>
+					Tradeoffs
+				</li>
+			{/if}
+			<li on:click={() => visit('/about')} class:activeTab={$currentPage === 'tradeoffs'}>
+				About Us
 			</li>
 		</ul>
 	</div>

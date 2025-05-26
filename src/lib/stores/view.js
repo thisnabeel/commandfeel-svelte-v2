@@ -5,7 +5,7 @@ export const layoutClass = writable('defaultView');
 
 export const loomifiedView = writable(false);
 
-export const showGuide = writable(true);
+export const showGuide = writable(false);
 export const showGuideButton = writable(false);
 
 export const showMobileMenu = writable(false);

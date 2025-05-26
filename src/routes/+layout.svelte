@@ -7,7 +7,7 @@
 	import { onMount } from 'svelte';
 	import Api from '$lib/api/api.js';
 	import { csrf_token } from '$lib/stores/api.js';
-	import { user } from '$lib/stores/user';
+	import { credsView, user } from '$lib/stores/user';
 	import { currentPage, showGuideButton, layoutClass } from '$lib/stores/view';
 
 	import GaragePopUp from '$lib/pop-ups/Garage.svelte';
@@ -22,6 +22,9 @@
 		// csrf = await Api.get('/generate_csrf');
 		// csrf_token.set(csrf);
 		showGuideButton.set(true);
+		if (window.location.pathname.includes('/quests/')) {
+			layoutClass.set('questView');
+		}
 
 		user.subscribe((value) => (user_signed_in = value));
 		// console.log(csrf_token)
@@ -36,8 +39,8 @@
 	<meta name="csrf-token" content={csrf} />
 </svelte:head>
 
-<main class={$layoutClass}>
-	<NavButtons />
+<NavButtons />
+<main class={$layoutClass} class:dimmed={$credsView}>
 	<Header />
 	<slot />
 </main>
@@ -52,6 +55,11 @@
 	<p>visit <a href="https://kit.svelte.dev">kit.svelte.dev</a> to learn SvelteKit</p>
 </footer> -->
 <style>
+	.dimmed {
+		filter: blur(10px);
+		transition: all 0.3s ease;
+		/* background: rgba(0, 0, 0, 0.7); */
+	}
 	main {
 		flex: 1;
 		display: flex;
