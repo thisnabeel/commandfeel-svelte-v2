@@ -5,6 +5,8 @@
 	import Row from './Row.svelte';
 	import { selectedWonder } from '$lib/stores/wonders/mapper';
 	import sticky from '$lib/functions/sticky.js';
+	import Fa from 'svelte-fa';
+	import { faBolt } from '@fortawesome/free-solid-svg-icons';
 
 	let isStuck = false;
 	let writing = false;
@@ -302,6 +304,15 @@
 
 		wonders = clone;
 	}
+
+	async function generateArcade() {
+		try {
+			const response = await Api.post('/wonders/generate_arcade.json');
+			wonders = [...wonders, response];
+		} catch (error) {
+			console.error('Failed to generate arcade:', error);
+		}
+	}
 </script>
 
 <section>
@@ -323,13 +334,20 @@
 				on:focus={() => (writing = true)}
 				on:blur={() => (writing = false)}
 			/>
-			<!-- svelte-ignore a11y-click-events-have-key-events -->
-			<div class="input-group-append" on:click={addWonder}>
-				{#if $selectedWonder}
-					<div class="btn btn-warning">Nest</div>
-				{:else}
-					<div class="btn btn-info">Add</div>
-				{/if}
+			<div class="input-group-append">
+				<!-- svelte-ignore a11y-click-events-have-key-events -->
+				<div class="btn-group">
+					<div class="btn" on:click={addWonder}>
+						{#if $selectedWonder}
+							<div class="btn btn-warning">Nest</div>
+						{:else}
+							<div class="btn btn-info">Add</div>
+						{/if}
+					</div>
+					<div class="btn btn-primary" on:click={generateArcade}>
+						<Fa icon={faBolt} />
+					</div>
+				</div>
 			</div>
 		</div>
 	</div>
@@ -352,5 +370,19 @@
 
 	.sticky[data-position='top'] {
 		top: 1rem;
+	}
+
+	.btn-group {
+		display: flex;
+	}
+
+	.btn-primary {
+		background-color: #416fff;
+		color: white;
+		border: 1px solid #3257d3;
+	}
+
+	.btn-primary:hover {
+		background-color: #3257d3;
 	}
 </style>
