@@ -5,7 +5,7 @@
 	import API from '$lib/api/api';
 
 	export let quest;
-	export let skillId = null; // Optional, for when used in skills context
+	export let elementType;
 	export let onDelete = () => {}; // Optional callback for deletion
 
 	let selectedQuest = null;
@@ -45,8 +45,8 @@
 		selectedQuest = quest;
 		loadingSteps = true;
 		try {
-			const endpoint = quest.skill_id
-				? `/skills/${quest.skill_id}/quests/${quest.id}/quest_steps`
+			const endpoint = quest.questable.id
+				? `/${elementType}/${quest.questable.id}/quests/${quest.id}/quest_steps`
 				: `/quests/${quest.id}/quest_steps`;
 			questSteps = await API.get(endpoint);
 		} catch (err) {
@@ -95,8 +95,8 @@
 	async function deleteStep(stepId) {
 		if (!selectedQuest) return;
 		try {
-			const endpoint = skillId
-				? `/skills/${skillId}/quests/${selectedQuest.id}/quest_steps/${stepId}`
+			const endpoint = quest.skill_id
+				? `/${elementType}/${quest.skill_id}/quests/${selectedQuest.id}/quest_steps/${stepId}`
 				: `/quests/${selectedQuest.id}/quest_steps/${stepId}`;
 			await API.delete(endpoint);
 			questSteps = questSteps.filter((s) => s.id !== stepId);
@@ -148,7 +148,7 @@
 		const formData = new FormData();
 		formData.append('file', file);
 
-		console.log({ skillId }, { selectedQuest });
+		// console.log({ skillId }, { selectedQuest });
 
 		try {
 			const endpoint = selectedQuest.skill_id

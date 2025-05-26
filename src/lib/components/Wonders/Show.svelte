@@ -1,6 +1,6 @@
 <script>
 	import Show from '$lib/components/Page/Show.svelte';
-	export let skill;
+	export let wonder;
 </script>
 
-<Show element={skill} elementType="skills" />
+<Show element={wonder} elementType="wonders" />

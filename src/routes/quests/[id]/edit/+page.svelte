@@ -40,7 +40,7 @@
 	{#if loading}
 		<div class="loading">Loading quest...</div>
 	{:else if quest}
-		<QuestCard {quest} onDelete={handleDelete} />
+		<QuestCard {quest} elementType={quest.questable_type} onDelete={handleDelete} />
 	{:else}
 		<div class="error">Quest not found</div>
 	{/if}

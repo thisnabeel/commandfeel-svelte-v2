@@ -1,0 +1,230 @@
+<script lang="ts">
+	interface Element {
+		id: number;
+		abstractions: Abstraction[];
+	}
+
+	interface Abstraction {
+		id: number;
+		body: string;
+	}
+
+	export let element: Element;
+	export let elementType;
+	import { user } from '$lib/stores/user';
+	import { goto } from '$app/navigation';
+	import Abstraction from './Abstraction.svelte';
+	import { modals } from 'svelte-modals';
+	import QuestTitleModal from './QuestTitleModal.svelte';
+
+	import Api from '$lib/api/api';
+	import Swal from 'sweetalert2';
+	import API from '$lib/api/api';
+	async function handleRemoveAbstraction(payload: { id: number }) {
+		console.log({ payload });
+		await Api.delete('/abstractions/' + payload.id + '.json');
+		element.abstractions = element.abstractions.filter((s) => s.id !== payload.id);
+	}
+
+	const addAbstraction = async () => {
+		const response = await Api.post('/abstractions.json', {
+			abstractable_id: element.id,
+			abstractable_type: 'Element'
+		});
+		console.log(response);
+		element.abstractions = [...element.abstractions, response];
+		// console.log('fetch element', element);
+		// fetchElement(element.id);
+	};
+
+	const generateAbstraction = async () => {
+		const response = await Api.post('/elements/generate_abstraction.json', {
+			id: element.id
+		});
+
+		element.abstractions = [...element.abstractions, response];
+	};
+
+	async function createQuest(abstraction) {
+		try {
+			modals.open(QuestTitleModal, {
+				abstraction,
+				onTitleSubmit: async (title) => {
+					Swal.fire('Building Quest...');
+
+					const quest = await API.post(`/elements/${element.id}/quests`, {
+						title: title,
+						description: abstraction.body,
+						position: 0,
+						element_id: element.id,
+						image_url: '',
+						difficulty: 1
+					});
+
+					try {
+						await API.post(`/quests/${quest.id}/quest_wizard`, {
+							level: 'beginner',
+							abstraction: abstraction.body
+						});
+						await Swal.fire({
+							icon: 'success',
+							title: 'Quest Created!',
+							text: 'Your quest is now ready to play',
+							showCancelButton: true,
+							confirmButtonText: 'Play Now',
+							cancelButtonText: 'Close',
+							confirmButtonColor: '#28a745'
+						}).then((result) => {
+							if (result.isConfirmed) {
+								goto(`/quests/${quest.id}/play`);
+							}
+						});
+					} catch (err) {
+						const error = err.message || 'Failed to generate quest steps';
+						await Swal.fire({
+							icon: 'error',
+							title: 'Oops...',
+							text: error
+						});
+					}
+					return quest;
+				}
+			});
+		} catch (err) {
+			const error = err.message || 'An error occurred while creating quest';
+			console.log('error', error);
+		}
+	}
+	async function makeQuestFromAbstraction(abstraction) {
+		console.log('makeQuestFromAbstraction', abstraction);
+		createQuest(abstraction);
+	}
+
+	let requested = false;
+</script>
+
+<ul class="abstractions">
+	{#if $user && $user.admin}
+		<div class="adder">
+			<div class="add-abstraction" on:click={addAbstraction}>+</div>
+			<div class="btn btn-warning generate-abstraction" on:click={generateAbstraction}>
+				<i class="fa fa-bolt" />
+			</div>
+		</div>
+	{/if}
+	{#if element.abstractions.length > 0}
+		{#each element.abstractions as abstraction}
+			<li>
+				<Abstraction
+					{element}
+					{abstraction}
+					user={$user}
+					removeAbstraction={handleRemoveAbstraction}
+					{makeQuestFromAbstraction}
+				/>
+			</li>
+		{/each}
+	{:else}
+		<div class="cta">
+			<h1>No Abstractions Yet.</h1>
+			<br />
+			{#if !requested}
+				<div class="btn btn-warning" on:click={() => (requested = true)}>Request Abstraction</div>
+			{:else}
+				<div class="requested">
+					Thank You for requesting.<br /> Our team will start simplifying this concept soon.
+				</div>
+			{/if}
+		</div>
+	{/if}
+</ul>
+
+<style>
+	.cta {
+		background: rgb(207, 41, 41);
+		color: #fff;
+		display: block;
+		padding: 3em;
+		border-radius: 8px;
+	}
+
+	.cta .btn {
+		display: block;
+		font-size: 22px;
+	}
+
+	.cta h1 {
+		color: #fff;
+	}
+	.adder {
+		font-size: 72px;
+		position: absolute;
+		left: 35%;
+		/* display: inline; */
+		height: 0px;
+		color: #ffd67f;
+		width: 0px;
+		bottom: 60px;
+		display: -webkit-inline-box;
+	}
+	/* 
+	.add-abstraction {
+		font-size: 72px;
+		position: absolute;
+		right: 50%;
+		display: inline;
+		height: 0px;
+		color: #ffd67f;
+		width: 0px;
+		bottom: 60px;
+	} */
+
+	.tab {
+		padding: 14px;
+	}
+	.tab.active {
+		background-color: #000;
+		color: #fff;
+	}
+	.flex {
+		display: flex;
+	}
+
+	.flex > div {
+		flex: 1 1 33%;
+		text-align: center;
+	}
+
+	.title {
+		padding: 40px 0px;
+	}
+	.wrapper {
+		background: #fff;
+		padding: 30px;
+		border-radius: 10px;
+		position: relative;
+	}
+
+	.abstractions {
+		font-size: 24px;
+		color: #000;
+		position: relative;
+		margin: 10px;
+		text-align: left;
+		list-style: none;
+		width: 70%;
+		margin: 0 auto;
+		padding: 20px 0;
+	}
+
+	@media (max-width: 480px) {
+		.abstractions {
+			width: 100%;
+		}
+
+		.fa-bolt {
+			right: 10px;
+			top: 20px;
+		}
+	}
+</style>

@@ -68,7 +68,7 @@
 					</span> -->
 					<span class="in-lang">
 						<i class="fa fa-compass" aria-hidden="true" />
-						{item.skill.title}
+						{item.questable.title}
 					</span>
 				</button>
 				{#if $user && $user.admin}

@@ -1,5 +1,6 @@
 <script>
-	export let skill;
+	export let element;
+	export let elementType;
 
 	import { user } from '$lib/stores/user';
 	import Api from '$lib/api/api.js';
@@ -10,56 +11,56 @@
 
 	const addQuiz = async () => {
 		const response = await Api.post('/quizzes.json', {
-			quizable_id: skill.id,
-			quizable_type: 'Skill'
+			quizable_id: element.id,
+			quizable_type: 'Element'
 		});
 
-		skill.quizzes = [...skill.quizzes, response];
+		element.quizzes = [...element.quizzes, response];
 	};
 
 	const destroy = async (id) => {
 		const response = await Api.delete('/quizzes/' + id + '.json');
-		skill.quizzes = skill.quizzes.filter((q) => q.id !== id);
+		element.quizzes = element.quizzes.filter((q) => q.id !== id);
 	};
 
 	const hideQuiz = async (quiz) => {
 		const id = quiz.id;
-		skill.quizzes = skill.quizzes.filter((q) => q.id !== id);
+		element.quizzes = element.quizzes.filter((q) => q.id !== id);
 	};
 
 	const generateQuiz = async (category = null) => {
-		const response = await Api.post('/skills/generate_quiz.json', {
-			id: skill.id,
+		const response = await Api.post('/elements/generate_quiz.json', {
+			id: element.id,
 			category: category
 		});
 
-		skill.quizzes = [...skill.quizzes, response];
+		element.quizzes = [...element.quizzes, response];
 	};
 
 	async function addQuizSet(title = 'Untitled') {
 		const res = await API.post('/quiz_sets.json', {
-			quiz_setable_id: skill.id,
-			quiz_setable_type: 'Skill',
-			position: skill.quiz_sets.length + 1,
+			quiz_setable_id: element.id,
+			quiz_setable_type: elementType[0].toUpperCase() + elementType.slice(1, -1),
+			position: element.quiz_sets.length + 1,
 			title: title
 		});
 		console.log({ res });
-		skill.quiz_sets = [...skill.quiz_sets, res];
+		element.quiz_sets = [...element.quiz_sets, res];
 	}
 
 	async function removeSet(payload) {
 		console.log({ payload });
 		const res = await API.delete('/quiz_sets/' + payload.id + '.json');
-		skill.quiz_sets = skill.quiz_sets.filter((s) => s.id !== payload.id);
+		element.quiz_sets = element.quiz_sets.filter((s) => s.id !== payload.id);
 	}
 
-	const suggestedTitles = ['General', 'Jeopardy', 'Scenarios', 'Use Cases', 'Differences'];
+	const suggestedTitles = ['General', 'Jeopardy', 'Scenarios', 'Use Cases', 'Differences', 'Asks'];
 </script>
 
 <div class="quiz_sets">
 	<ul class="clean-list">
-		{#each skill.quiz_sets as set}
-			<QuizSet {skill} {set} {removeSet} />
+		{#each element.quiz_sets as set}
+			<QuizSet {element} {set} {removeSet} />
 		{/each}
 	</ul>
 
@@ -68,7 +69,7 @@
 			<div class="add-quiz btn btn-outline-warning" on:click={addQuizSet}>+</div>
 		</div>
 		<div class="adder flex">
-			{#each suggestedTitles.filter((t) => !skill.quiz_sets
+			{#each suggestedTitles.filter((t) => !element.quiz_sets
 						.map((s) => s.title)
 						.includes(t)) as title}
 				<div class="">

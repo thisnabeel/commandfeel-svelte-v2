@@ -5,7 +5,8 @@
 
 	export let set;
 	export let removeSet;
-	export let skill;
+	export let element;
+	export let elementType;
 
 	let prompt = '';
 
@@ -17,15 +18,15 @@
 			quiz_set_id: set.id,
 			question: 'Untitle',
 			position: set.quizzes.length + 1,
-			quizable_type: 'Skill',
-			quizable_id: skill.id
+			quizable_type: elementType,
+			quizable_id: element.id
 		});
 
 		set.quizzes = [...set.quizzes, response];
 	};
 
 	const generateQuiz = async (category) => {
-		const response = await API.post('/skills/generate_quiz.json', {
+		const response = await API.post('/elements/generate_quiz.json', {
 			id: set.quiz_setable_id,
 			category: category,
 			quiz_set_id: set.id,

@@ -25,7 +25,7 @@
 	onMount(async function () {
 		// return;
 		getSkills();
-		// getWonders();
+		getWonders();
 	});
 
 	const getSkills = async () => {
@@ -33,7 +33,7 @@
 		console.log('response', response);
 		let json = response;
 		skills.set(json);
-		console.log('skills set', skills);
+		console.log('skills set', $skills);
 		let parents = json.filter((obj) => {
 			return obj.skill_id === null;
 		});
@@ -56,31 +56,22 @@
 	};
 
 	const getWonders = async () => {
-		const response = await Api.get('/cached_wonders.json');
+		const response = await Api.get('/wonders.json');
 		console.log('response', response);
 		let json = response;
 		wonders.set(json);
-		let parents = json.filter((obj) => {
-			return obj.wonder_id === null;
-		});
-		console.log('wokring', 3);
-		parents.map((wonder, index) => {
-			// Connect each Child to Parent
-			connectChildToParent(wonder);
-		});
-		function connectChildToParent(wonder) {
-			let children = json.filter((obj) => {
-				return obj.wonder_id === wonder.id;
-			});
-			wonder['wonders'] = children;
-			wonder['wonders'].map((wonder, index) => {
-				// Connect each Child to Parent
-				connectChildToParent(wonder);
-			});
-		}
+		console.log('wonders set', $wonders);
 
-		// console.log("wonders", parents.filter(wonder => wonder.wonders.length !== 0))
-		// parents.filter(wonder => wonder.wonders.length !== 0)
+		// Since wonder_id field isn't present, treat all wonders as top-level
+		let parents = json;
+		parents.forEach((wonder) => {
+			// Initialize empty wonders array if not present
+			if (!wonder.wonders) {
+				wonder.wonders = [];
+			}
+		});
+
+		console.log('wonders', parents);
 		wondersMap.set(parents);
 	};
 </script>
