@@ -241,7 +241,7 @@
 			return;
 		}
 
-		await Api.delete(`/elements/${$selectedElement.id}.json`);
+		await Api.delete(`/${elementType}/${$selectedElement.id}.json`);
 		const clone = [...elements];
 
 		// console.log('element', $selectedElement);
@@ -279,7 +279,7 @@
 				let i = 0;
 				for (let el of clone) {
 					el.position = i + 1;
-					Api.put(`/elements/${el.id}.json`, {
+					Api.put(`/${elementType}/${el.id}.json`, {
 						position: el.position,
 						element_id: el.element_id
 					});
@@ -291,7 +291,7 @@
 			} else {
 				for (let el of node.elements) {
 					el.position = i + 1;
-					Api.put(`/elements/${el.id}.json`, {
+					Api.put(`/${elementType}/${el.id}.json`, {
 						position: el.position,
 						element_id: el.element_id
 					});

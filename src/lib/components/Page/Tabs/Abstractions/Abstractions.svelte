@@ -38,7 +38,7 @@
 	};
 
 	const generateAbstraction = async () => {
-		const response = await Api.post('/elements/generate_abstraction.json', {
+		const response = await Api.post(`/${elementType}/generate_abstraction`, {
 			id: element.id
 		});
 
@@ -52,7 +52,7 @@
 				onTitleSubmit: async (title) => {
 					Swal.fire('Building Quest...');
 
-					const quest = await API.post(`/elements/${element.id}/quests`, {
+					const quest = await API.post(`/${elementType}/${element.id}/quests`, {
 						title: title,
 						description: abstraction.body,
 						position: 0,

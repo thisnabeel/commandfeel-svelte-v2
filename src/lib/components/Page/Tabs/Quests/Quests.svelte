@@ -129,9 +129,12 @@
 	async function createStep() {
 		if (!selectedQuest) return;
 		try {
-			const res = await API.post(`/elements/${element.id}/quests/${selectedQuest.id}/quest_steps`, {
-				quest_step: newStep
-			});
+			const res = await API.post(
+				`/${elementType}/${element.id}/quests/${selectedQuest.id}/quest_steps`,
+				{
+					quest_step: newStep
+				}
+			);
 			questSteps = [...questSteps, res];
 			resetNewStep();
 		} catch (err) {
