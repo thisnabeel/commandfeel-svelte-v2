@@ -103,7 +103,7 @@
 				<h3>Dependencies</h3>
 				{#if infrastructurePattern?.infrastructure_pattern_dependencies?.length > 0}
 					<ul class="dependency-list">
-						{#each infrastructurePattern?.infrastructure_pattern_dependencies? as dependency}
+						{#each infrastructurePattern.infrastructure_pattern_dependencies || [] as dependency}
 							<li>
 								<span class="dependency-type">{dependency.dependable_type}:</span>
 								{dependency.dependable.title}

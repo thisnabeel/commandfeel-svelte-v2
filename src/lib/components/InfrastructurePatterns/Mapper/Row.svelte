@@ -64,10 +64,10 @@
 			await Api.delete(
 				`/infrastructure_patterns/${infrastructurePattern.id}/dependencies/${dependencyId}`
 			);
-			infrastructurePattern?.infrastructure_pattern_dependencies? =
-				infrastructurePattern?.infrastructure_pattern_dependencies?.filter(
+			infrastructurePattern.infrastructure_pattern_dependencies =
+				infrastructurePattern.infrastructure_pattern_dependencies?.filter(
 					(dep) => dep.id !== dependencyId
-				);
+				) || [];
 		} catch (error) {
 			console.error('Failed to remove dependency:', error);
 		}
@@ -113,7 +113,7 @@
 		<div class="dependencies">
 			<h4>Current Dependencies:</h4>
 			<ul class="dependency-list">
-				{#each infrastructurePattern?.infrastructure_pattern_dependencies? || [] as dependency}
+				{#each infrastructurePattern.infrastructure_pattern_dependencies || [] as dependency}
 					<li>
 						{dependency.dependable.title}
 						<button class="btn btn-sm btn-danger" on:click={() => removeDependency(dependency.id)}>
