@@ -44,6 +44,9 @@
 			{#if $user && $user.admin}
 				<!-- svelte-ignore a11y-click-events-have-key-events -->
 				<li class="control_panel" on:click={() => visit('/control_panel')}>Control Panel</li>
+				<li class="control_panel" on:click={() => visit('/infrastructure_patterns')}>
+					Infra Patterns
+				</li>
 			{/if}
 			<li on:click={() => visit(`/`)}>Home</li>
 			<li on:click={() => visit(`/arcade`)}>Arcade</li>

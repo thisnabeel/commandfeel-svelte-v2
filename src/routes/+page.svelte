@@ -37,7 +37,7 @@
 </script>
 
 <svelte:head>
-	<title>Home</title>
+	<title>The Software Engineering Gym</title>
 	<meta name="description" content="commandfeel" />
 </svelte:head>
 <!-- 

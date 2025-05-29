@@ -23,7 +23,7 @@
 
 <div class="cta-container">
 	<div class="cta-content">
-		<h1 class="space-grotesk-heading">The Computer Science Gym</h1>
+		<h1 class="space-grotesk-heading">The Software Engineering Gym</h1>
 		<p class="cta-subtitle">Try a Quest:</p>
 	</div>
 	<div class="cta-background"></div>
