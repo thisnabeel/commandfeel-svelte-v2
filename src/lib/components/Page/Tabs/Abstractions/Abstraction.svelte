@@ -1,6 +1,7 @@
 <script>
 	import Api from '$lib/api/api';
 	import { modals } from 'svelte-modals';
+	import Swal from 'sweetalert2';
 
 	export let user;
 	export let abstraction;
@@ -32,15 +33,53 @@
 			console.log('response', response);
 		}, 1000);
 	};
+
+	async function handleBoltClick() {
+		const result = await Swal.fire({
+			title: 'Generate',
+			text: 'What would you like to generate?',
+			icon: 'question',
+			showCancelButton: true,
+			confirmButtonText: 'Quest',
+			cancelButtonText: 'Script',
+			showCloseButton: true,
+			reverseButtons: true
+		});
+
+		if (result.isConfirmed) {
+			// User clicked Quest
+			makeQuestFromAbstraction(abstraction);
+		} else if (result.dismiss === Swal.DismissReason.cancel) {
+			// User clicked Script
+
+			try {
+				Swal.fire('Generating Script...');
+				const response = await Api.post('/scripts/script_wizard', {
+					abstraction_id: abstraction.id
+				});
+				await Swal.fire({
+					icon: 'success',
+					title: 'Script Generated!',
+					text: 'Your script has been created successfully'
+				});
+			} catch (error) {
+				await Swal.fire({
+					icon: 'error',
+					title: 'Oops...',
+					text: error.message || 'Failed to generate script'
+				});
+			}
+		}
+	}
 </script>
 
 <li class="abstraction" class:has_video={abstraction && abstraction.preview}>
 	{#if user && user.admin}
-		<span contenteditable on:keyup={(e) => debounce(event.target.innerHTML)}
+		<span contenteditable on:keyup={(e) => debounce(e.target.innerHTML)}
 			>{@html abstraction.body}</span
 		>
 		<span class="fa fa-trash" on:click={() => destroy(abstraction)} />
-		<span class="fa fa-bolt" on:click={() => makeQuestFromAbstraction(abstraction)} />
+		<span class="fa fa-bolt" on:click={handleBoltClick} />
 	{:else}
 		<span>{@html abstraction.body}</span>
 	{/if}

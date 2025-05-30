@@ -51,6 +51,10 @@
 	"dependencies": {
 		"@fortawesome/free-brands-svg-icons": "^6.7.2",
 		"@fortawesome/free-solid-svg-icons": "^6.7.2",
+		"@tinymce/tinymce-svelte": "^3.1.0",
+		"@tiptap/core": "^2.12.0",
+		"@tiptap/pm": "^2.12.0",
+		"@tiptap/starter-kit": "^2.12.0",
 		"axios": "^1.9.0",
 		"cl-editor": "^2.3.0",
 		"codemirror": "^6.0.1",

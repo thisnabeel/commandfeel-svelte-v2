@@ -11,10 +11,12 @@
 	import Challenges from './Tabs/Challenges/Challenges.svelte';
 	import Quizzes from './Tabs/Quiz/Quizzes.svelte';
 	import Quests from './Tabs/Quests/Quests.svelte';
-
+	import Scripts from './Tabs/Scripts/Scripts.svelte';
 	export let element;
 	export let elementType;
-	let tabs = ['Abstractions', 'Quiz', 'Challenges', 'Quests'];
+	let tabs = ['Abstractions'];
+	let admin_tabs = ['Abstractions', 'Quiz', 'Challenges', 'Quests', 'Scripts'];
+
 	let activeTab = 'Abstractions';
 
 	$: if (element && (!$user || !$user.admin)) {
@@ -43,7 +45,7 @@
 	<h1 class="title">{element.title}</h1>
 
 	<div class="flex">
-		{#each tabs as tab}
+		{#each $user?.admin ? admin_tabs : tabs as tab}
 			<div class="tab" class:active={activeTab === tab} on:click={() => (activeTab = tab)}>
 				{tab}
 			</div>
@@ -55,15 +57,19 @@
 	{/if}
 
 	{#if activeTab === 'Challenges'}
-		<Challenges {element} {elementType} user={$user} />
+		<Challenges {element} {elementType} />
 	{/if}
 
 	{#if activeTab === 'Quiz'}
-		<Quizzes {element} {elementType} user={$user} />
+		<Quizzes {element} {elementType} />
 	{/if}
 
 	{#if activeTab === 'Quests'}
 		<Quests {element} {elementType} user={$user} />
+	{/if}
+
+	{#if activeTab === 'Scripts'}
+		<Scripts {element} {elementType} />
 	{/if}
 </section>
 <br />
