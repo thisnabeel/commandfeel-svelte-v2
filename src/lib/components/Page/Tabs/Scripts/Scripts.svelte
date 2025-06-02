@@ -198,43 +198,195 @@
 
 	{#if loading}
 		<div class="loading">Loading scripts...</div>
-	{:else if scripts.length > 0}
-		<div class="scripts-list">
-			{#each scripts as script}
-				<div class="script-card">
-					<div class="script-header">
-						<h3>{script.title}</h3>
-						{#if $user?.admin}
-							<div class="script-actions">
-								<button
-									class="btn btn-sm btn-outline-primary"
-									on:click={() => startEditing(script)}
-								>
-									<i class="fa fa-edit" />
-								</button>
-								<button
-									class="btn btn-sm btn-outline-danger"
-									on:click={() => deleteScript(script.id)}
-								>
-									<i class="fa fa-trash" />
-								</button>
-							</div>
-						{/if}
-					</div>
+	{:else}
+		{#if $user?.admin}
+			<div class="create-script-btn mb-4">
+				<button
+					class="btn btn-primary"
+					on:click={async () => {
+						try {
+							const newScript = await Api.post(
+								`/${elementType.toLowerCase()}/${element.id}/scripts`,
+								{
+									script: {
+										title: 'New Script',
+										body: '',
+										linkedin_body: '',
+										tiktok_body: '',
+										youtube_title: '',
+										youtube_body: ''
+									}
+								}
+							);
+							scripts = [...scripts, newScript];
+							startEditing(newScript);
+						} catch (err) {
+							error = err?.message || 'Failed to create script';
+						}
+					}}
+				>
+					<i class="fa fa-plus" /> Create New Script
+				</button>
+			</div>
+		{/if}
+		{#if scripts.length > 0}
+			<div class="scripts-list">
+				{#each scripts as script}
+					<div class="script-card">
+						<div class="script-header">
+							<h3>{script.title}</h3>
+							{#if $user?.admin}
+								<div class="script-actions">
+									<button
+										class="btn btn-sm btn-outline-primary"
+										on:click={() => startEditing(script)}
+									>
+										<i class="fa fa-edit" />
+									</button>
+									<button
+										class="btn btn-sm btn-outline-danger"
+										on:click={() => deleteScript(script.id)}
+									>
+										<i class="fa fa-trash" />
+									</button>
+								</div>
+							{/if}
+						</div>
 
-					{#if editingScriptId === script.id}
-						<div class="edit-form" transition:slide>
-							<div class="form-group">
-								<label for="title">Title</label>
-								<input
-									type="text"
-									class="form-control"
-									id="title"
-									bind:value={editForm.title}
-									placeholder="Script title"
-								/>
-							</div>
+						{#if editingScriptId === script.id}
+							<div class="edit-form" transition:slide>
+								<div class="form-group">
+									<label for="title">Title</label>
+									<input
+										type="text"
+										class="form-control"
+										id="title"
+										bind:value={editForm.title}
+										placeholder="Script title"
+									/>
+								</div>
 
+								<div class="social-tabs">
+									<button
+										class="tab-btn"
+										class:active={activeTab === 'video'}
+										on:click={() => switchTab('video')}
+									>
+										<i class="fa fa-video" /> Video Script
+									</button>
+									<button
+										class="tab-btn"
+										class:active={activeTab === 'linkedin'}
+										on:click={() => switchTab('linkedin')}
+									>
+										<i class="fab fa-linkedin" /> LinkedIn
+									</button>
+									<button
+										class="tab-btn"
+										class:active={activeTab === 'tiktok'}
+										on:click={() => switchTab('tiktok')}
+									>
+										<i class="fab fa-tiktok" /> TikTok
+									</button>
+									<button
+										class="tab-btn"
+										class:active={activeTab === 'youtube'}
+										on:click={() => switchTab('youtube')}
+									>
+										<i class="fab fa-youtube" /> YouTube
+									</button>
+								</div>
+
+								{#if activeTab === 'youtube'}
+									<div class="form-group">
+										<label for="youtube_title">YouTube Title</label>
+										<input
+											type="text"
+											class="form-control"
+											id="youtube_title"
+											bind:value={editForm.youtube_title}
+											placeholder="YouTube video title"
+										/>
+									</div>
+								{/if}
+
+								<div class="form-group">
+									<label for="body">Content</label>
+									{#if editor}
+										<div class="editor-toolbar">
+											<button
+												class="toolbar-btn"
+												class:active={editor.isActive('heading', { level: 1 })}
+												on:click={() => editor.chain().focus().toggleHeading({ level: 1 }).run()}
+											>
+												H1
+											</button>
+											<button
+												class="toolbar-btn"
+												class:active={editor.isActive('heading', { level: 2 })}
+												on:click={() => editor.chain().focus().toggleHeading({ level: 2 }).run()}
+											>
+												H2
+											</button>
+											<button
+												class="toolbar-btn"
+												class:active={editor.isActive('bold')}
+												on:click={() => editor.chain().focus().toggleBold().run()}
+											>
+												<i class="fa fa-bold" />
+											</button>
+											<button
+												class="toolbar-btn"
+												class:active={editor.isActive('italic')}
+												on:click={() => editor.chain().focus().toggleItalic().run()}
+											>
+												<i class="fa fa-italic" />
+											</button>
+											<button
+												class="toolbar-btn"
+												class:active={editor.isActive('bulletList')}
+												on:click={() => editor.chain().focus().toggleBulletList().run()}
+											>
+												<i class="fa fa-list-ul" />
+											</button>
+											<button
+												class="toolbar-btn"
+												class:active={editor.isActive('orderedList')}
+												on:click={() => editor.chain().focus().toggleOrderedList().run()}
+											>
+												<i class="fa fa-list-ol" />
+											</button>
+											<button
+												class="toolbar-btn"
+												class:active={editor.isActive('code')}
+												on:click={() => editor.chain().focus().toggleCode().run()}
+											>
+												<i class="fa fa-code" />
+											</button>
+											<button
+												class="toolbar-btn"
+												on:click={() => editor.chain().focus().undo().run()}
+											>
+												<i class="fa fa-undo" />
+											</button>
+											<button
+												class="toolbar-btn"
+												on:click={() => editor.chain().focus().redo().run()}
+											>
+												<i class="fa fa-redo" />
+											</button>
+										</div>
+									{/if}
+									<div class="editor-content" bind:this={editorElement} />
+								</div>
+								<div class="edit-actions">
+									<button class="btn btn-secondary" on:click={cancelEditing}>Cancel</button>
+									<button class="btn btn-primary" on:click={() => updateScript(script.id)}>
+										Save Changes
+									</button>
+								</div>
+							</div>
+						{:else}
 							<div class="social-tabs">
 								<button
 									class="tab-btn"
@@ -266,158 +418,38 @@
 								</button>
 							</div>
 
-							{#if activeTab === 'youtube'}
-								<div class="form-group">
-									<label for="youtube_title">YouTube Title</label>
-									<input
-										type="text"
-										class="form-control"
-										id="youtube_title"
-										bind:value={editForm.youtube_title}
-										placeholder="YouTube video title"
-									/>
-								</div>
-							{/if}
-
-							<div class="form-group">
-								<label for="body">Content</label>
-								{#if editor}
-									<div class="editor-toolbar">
-										<button
-											class="toolbar-btn"
-											class:active={editor.isActive('heading', { level: 1 })}
-											on:click={() => editor.chain().focus().toggleHeading({ level: 1 }).run()}
-										>
-											H1
-										</button>
-										<button
-											class="toolbar-btn"
-											class:active={editor.isActive('heading', { level: 2 })}
-											on:click={() => editor.chain().focus().toggleHeading({ level: 2 }).run()}
-										>
-											H2
-										</button>
-										<button
-											class="toolbar-btn"
-											class:active={editor.isActive('bold')}
-											on:click={() => editor.chain().focus().toggleBold().run()}
-										>
-											<i class="fa fa-bold" />
-										</button>
-										<button
-											class="toolbar-btn"
-											class:active={editor.isActive('italic')}
-											on:click={() => editor.chain().focus().toggleItalic().run()}
-										>
-											<i class="fa fa-italic" />
-										</button>
-										<button
-											class="toolbar-btn"
-											class:active={editor.isActive('bulletList')}
-											on:click={() => editor.chain().focus().toggleBulletList().run()}
-										>
-											<i class="fa fa-list-ul" />
-										</button>
-										<button
-											class="toolbar-btn"
-											class:active={editor.isActive('orderedList')}
-											on:click={() => editor.chain().focus().toggleOrderedList().run()}
-										>
-											<i class="fa fa-list-ol" />
-										</button>
-										<button
-											class="toolbar-btn"
-											class:active={editor.isActive('code')}
-											on:click={() => editor.chain().focus().toggleCode().run()}
-										>
-											<i class="fa fa-code" />
-										</button>
-										<button
-											class="toolbar-btn"
-											on:click={() => editor.chain().focus().undo().run()}
-										>
-											<i class="fa fa-undo" />
-										</button>
-										<button
-											class="toolbar-btn"
-											on:click={() => editor.chain().focus().redo().run()}
-										>
-											<i class="fa fa-redo" />
-										</button>
+							<div class="script-content">
+								{#if activeTab === 'video'}
+									<div class="content">
+										{@html script.body || 'No video script content yet.'}
+									</div>
+								{:else if activeTab === 'linkedin'}
+									<div class="content">
+										{@html script.linkedin_body || 'No LinkedIn content yet.'}
+									</div>
+								{:else if activeTab === 'tiktok'}
+									<div class="content">
+										{@html script.tiktok_body || 'No TikTok content yet.'}
+									</div>
+								{:else if activeTab === 'youtube'}
+									{#if script.youtube_title}
+										<h4 class="youtube-title">{script.youtube_title}</h4>
+									{/if}
+									<div class="content">
+										{@html script.youtube_body || 'No YouTube content yet.'}
 									</div>
 								{/if}
-								<div class="editor-content" bind:this={editorElement} />
 							</div>
-							<div class="edit-actions">
-								<button class="btn btn-secondary" on:click={cancelEditing}>Cancel</button>
-								<button class="btn btn-primary" on:click={() => updateScript(script.id)}>
-									Save Changes
-								</button>
-							</div>
-						</div>
-					{:else}
-						<div class="social-tabs">
-							<button
-								class="tab-btn"
-								class:active={activeTab === 'video'}
-								on:click={() => switchTab('video')}
-							>
-								<i class="fa fa-video" /> Video Script
-							</button>
-							<button
-								class="tab-btn"
-								class:active={activeTab === 'linkedin'}
-								on:click={() => switchTab('linkedin')}
-							>
-								<i class="fab fa-linkedin" /> LinkedIn
-							</button>
-							<button
-								class="tab-btn"
-								class:active={activeTab === 'tiktok'}
-								on:click={() => switchTab('tiktok')}
-							>
-								<i class="fab fa-tiktok" /> TikTok
-							</button>
-							<button
-								class="tab-btn"
-								class:active={activeTab === 'youtube'}
-								on:click={() => switchTab('youtube')}
-							>
-								<i class="fab fa-youtube" /> YouTube
-							</button>
-						</div>
-
-						<div class="script-content">
-							{#if activeTab === 'video'}
-								<div class="content">
-									{@html script.body || 'No video script content yet.'}
-								</div>
-							{:else if activeTab === 'linkedin'}
-								<div class="content">
-									{@html script.linkedin_body || 'No LinkedIn content yet.'}
-								</div>
-							{:else if activeTab === 'tiktok'}
-								<div class="content">
-									{@html script.tiktok_body || 'No TikTok content yet.'}
-								</div>
-							{:else if activeTab === 'youtube'}
-								{#if script.youtube_title}
-									<h4 class="youtube-title">{script.youtube_title}</h4>
-								{/if}
-								<div class="content">
-									{@html script.youtube_body || 'No YouTube content yet.'}
-								</div>
-							{/if}
-						</div>
-					{/if}
-				</div>
-			{/each}
-		</div>
-	{:else}
-		<div class="empty-state">
-			<h3>No Scripts Available</h3>
-			<p>Scripts generated from abstractions will appear here.</p>
-		</div>
+						{/if}
+					</div>
+				{/each}
+			</div>
+		{:else}
+			<div class="empty-state">
+				<h3>No Scripts Available</h3>
+				<p>Scripts generated from abstractions will appear here.</p>
+			</div>
+		{/if}
 	{/if}
 </div>
 
@@ -619,6 +651,19 @@
 
 	.empty-state p {
 		margin: 0;
+	}
+
+	.create-script-btn {
+		display: flex;
+		justify-content: flex-end;
+	}
+
+	.create-script-btn button {
+		display: flex;
+		align-items: center;
+		gap: 0.5rem;
+		padding: 0.75rem 1.5rem;
+		font-weight: 500;
 	}
 
 	@media (max-width: 640px) {

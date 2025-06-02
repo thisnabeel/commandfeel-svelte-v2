@@ -67,6 +67,7 @@
 		"sortablejs": "^1.15.6",
 		"svelte-easy-crop": "^4.0.1",
 		"svelte-fa": "^4.0.4",
+		"svelte-inview": "^4.0.4",
 		"svelte-modals": "^2.0.1",
 		"svelte-motion": "^0.12.2",
 		"svelte-outclick": "^4.1.2",

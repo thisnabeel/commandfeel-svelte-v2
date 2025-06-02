@@ -49,7 +49,7 @@
 				</li>
 			{/if}
 			<li on:click={() => visit(`/`)}>Home</li>
-			<li on:click={() => visit(`/arcade`)}>Arcade</li>
+			<li on:click={() => visit(`/code_comparisons/arcade`)}>Arcade</li>
 			<!-- svelte-ignore a11y-click-events-have-key-events -->
 
 			{#if $user && $user.admin}
