@@ -32,6 +32,11 @@
 		code_comparison_title: string;
 		code_blocks: Array<{ content: string }>;
 		tags?: Tag[];
+		answerable?: {
+			id: number;
+			title: string;
+			description?: string | null;
+		};
 	}
 
 	let loading = true;
@@ -43,11 +48,16 @@
 	let options: Taggable[] = [];
 	let loadingOptions = false;
 	let activeCodeTab = 0;
+	let selectedOption: string | null = null;
+	let isCorrect: boolean | null = null;
+	let answerSubmitted = false;
 
 	async function loadNewQuestion() {
 		try {
 			loading = true;
-			showAnswer = false;
+			selectedOption = null;
+			isCorrect = null;
+			answerSubmitted = false;
 			userAnswer = '';
 			currentQuestion = await Api.get('/code_comparisons/arcade');
 			if (currentQuestion?.tags) {
@@ -67,8 +77,7 @@
 			// Filter only Wonder and Skill items and shuffle them
 			options = response.items
 				.filter((item: Taggable) => item.type === 'Wonder' || item.type === 'Skill')
-				.sort(() => Math.random() - 0.5)
-				.slice(0, 4); // Take only 4 random options
+				.sort(() => Math.random() - 0.5); // Shuffle the options
 		} catch (err) {
 			console.error('Failed to load taggables:', err);
 			options = [];
@@ -78,12 +87,23 @@
 	}
 
 	function checkAnswer(selectedTitle: string) {
-		userAnswer = selectedTitle;
-		showAnswer = true;
-		// Here you could implement actual answer checking logic
+		if (answerSubmitted) return; // Prevent further clicks after answer is submitted
+
+		selectedOption = selectedTitle;
+		isCorrect = currentQuestion?.answerable?.title === selectedTitle;
+		answerSubmitted = true;
+
+		if (isCorrect) {
+			streak++;
+		} else {
+			streak = 0;
+		}
 	}
 
 	function nextQuestion() {
+		selectedOption = null;
+		isCorrect = null;
+		answerSubmitted = false;
 		loadNewQuestion();
 	}
 
@@ -170,13 +190,29 @@
 									<div class="d-grid gap-2">
 										{#each options as option}
 											<Button
-												outline
-												color="primary"
+												outline={!answerSubmitted ||
+													(selectedOption !== option.title &&
+														option.title !== currentQuestion?.answerable?.title)}
+												color={answerSubmitted
+													? option.title === currentQuestion?.answerable?.title
+														? 'success'
+														: selectedOption === option.title
+															? 'danger'
+															: 'primary'
+													: 'primary'}
 												class="text-start"
 												on:click={() => checkAnswer(option.title)}
+												disabled={answerSubmitted}
 											>
 												{option.title}
-												<!-- <small class="text-muted ms-2">({option.type})</small> -->
+												{#if answerSubmitted && (option.title === currentQuestion?.answerable?.title || option.title === selectedOption)}
+													<i
+														class="fa {option.title === currentQuestion?.answerable?.title
+															? 'fa-check'
+															: 'fa-times'} ms-2"
+														aria-hidden="true"
+													/>
+												{/if}
 											</Button>
 										{/each}
 									</div>
@@ -195,23 +231,30 @@
 											bind:value={userAnswer}
 											placeholder="Which SOLID principle is being demonstrated?"
 											required
+											disabled={answerSubmitted}
 										/>
 									</FormGroup>
-									<Button type="submit" color="primary">Check Answer</Button>
+									<Button type="submit" color="primary" disabled={answerSubmitted}
+										>Check Answer</Button
+									>
 								</Form>
 							{/if}
-							<Button color="secondary" class="mt-3" on:click={nextQuestion}>Skip</Button>
+							<div class="d-flex mt-3 gap-2">
+								<Button color="secondary" on:click={nextQuestion}>Skip</Button>
+								{#if answerSubmitted}
+									<Button color="primary" on:click={nextQuestion}>Next Question</Button>
+								{/if}
+							</div>
 						{:else}
 							<div class="answer-section mt-4">
-								<div class="alert alert-info">
-									<h4 class="alert-heading">Explanation</h4>
+								<div class="alert {isCorrect ? 'alert-success' : 'alert-danger'}">
+									<h4 class="alert-heading">{isCorrect ? 'Correct!' : 'Not quite right'}</h4>
 									<p>
-										This example demonstrates the {currentQuestion.code_comparison_title}. The first
+										This example demonstrates the {currentQuestion?.answerable?.title}. The first
 										block shows code that violates the principle, while the second block shows a
 										refactored version that follows it.
 									</p>
 								</div>
-								<Button color="primary" on:click={nextQuestion}>Next Question</Button>
 							</div>
 						{/if}
 					</div>
@@ -330,5 +373,21 @@
 			grid-template-columns: 1fr 1fr;
 			gap: 1.5rem;
 		}
+	}
+
+	:global(.options-container .btn .fa) {
+		float: right;
+	}
+
+	:global(.options-container .btn-success) {
+		background-color: #28a745;
+		color: white;
+		border-color: #28a745;
+	}
+
+	:global(.options-container .btn-danger) {
+		background-color: #dc3545;
+		color: white;
+		border-color: #dc3545;
 	}
 </style>

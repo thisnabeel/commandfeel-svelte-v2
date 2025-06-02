@@ -29,10 +29,39 @@
 		title: string;
 		code_blocks?: CodeBlock[];
 		loading_blocks?: boolean;
+		answerable?: Answerable;
 	}
 
 	interface SortableEvent {
 		target: HTMLElement;
+	}
+
+	interface Tag {
+		id: number;
+		title: string;
+	}
+
+	interface Answerable {
+		id: number;
+		type: string;
+		title: string;
+		description?: string;
+	}
+
+	interface Taggable {
+		id: number;
+		title: string;
+		type: string;
+		description?: string;
+	}
+
+	interface StateObject {
+		[key: number]: any;
+	}
+
+	interface ApiError {
+		status?: number;
+		message?: string;
 	}
 
 	let codeComparisons: CodeComparison[] = [];
@@ -46,10 +75,15 @@
 	let selectedComparisonId: number | null = null;
 
 	// For tags
-	let tagSearchTerms = {};
-	let tagSearchResults = {};
-	let comparisonTags = {};
-	let showDropdowns = {};
+	let tagSearchTerms: StateObject = {};
+	let tagSearchResults: StateObject = {};
+	let comparisonTags: StateObject = {};
+	let showDropdowns: StateObject = {};
+
+	// For answerables
+	let loadingAnswerableOptions: StateObject = {};
+	let answerableOptions: StateObject = {};
+	let showAnswerableDropdowns: StateObject = {};
 
 	// Add this with other state variables at the top
 	let generatingExample = false;
@@ -57,6 +91,21 @@
 	async function fetchComparisons() {
 		try {
 			codeComparisons = await Api.get('/code_comparisons');
+			// Load answerable for each comparison
+			for (const comparison of codeComparisons) {
+				try {
+					const answerable = await Api.get(`/code_comparisons/${comparison.id}/answerable`);
+					if (answerable) {
+						comparison.answerable = answerable;
+					}
+				} catch (err: unknown) {
+					// Ignore 404s since some comparisons might not have answerables
+					const apiError = err as ApiError;
+					if (apiError.status !== 404) {
+						console.error('Failed to load answerable:', err);
+					}
+				}
+			}
 			loading = false;
 		} catch (err: any) {
 			error = err?.message || 'Failed to fetch code comparisons';
@@ -193,6 +242,19 @@
 		try {
 			comparison.loading_blocks = true;
 			const blocks = await Api.get(`/code_comparisons/${comparison.id}/code_blocks`);
+			// Also load the answerable while we're loading blocks
+			try {
+				const answerable = await Api.get(`/code_comparisons/${comparison.id}/answerable`);
+				if (answerable) {
+					comparison.answerable = answerable;
+				}
+			} catch (err: unknown) {
+				// Ignore 404s since some comparisons might not have answerables
+				const apiError = err as ApiError;
+				if (apiError.status !== 404) {
+					console.error('Failed to load answerable:', err);
+				}
+			}
 
 			codeComparisons = codeComparisons.map((c) => {
 				if (c.id === comparison.id) {
@@ -247,7 +309,7 @@
 		}
 	}
 
-	async function loadTags(comparisonId) {
+	async function loadTags(comparisonId: number) {
 		try {
 			comparisonTags[comparisonId] = await Api.get(`/code_comparisons/${comparisonId}/tags`);
 		} catch (err) {
@@ -255,7 +317,7 @@
 		}
 	}
 
-	async function searchTags(comparisonId) {
+	async function searchTags(comparisonId: number) {
 		const searchTerm = tagSearchTerms[comparisonId];
 		if (!searchTerm || searchTerm.length < 2) {
 			tagSearchResults[comparisonId] = [];
@@ -273,7 +335,7 @@
 		}
 	}
 
-	async function addTag(comparisonId, tag) {
+	async function addTag(comparisonId: number, tag: Tag) {
 		try {
 			await Api.post(`/code_comparisons/${comparisonId}/tags`, { tag_id: tag.id });
 			comparisonTags[comparisonId] = [...(comparisonTags[comparisonId] || []), tag];
@@ -284,10 +346,12 @@
 		}
 	}
 
-	async function removeTag(comparisonId, tagId) {
+	async function removeTag(comparisonId: number, tagId: number) {
 		try {
 			await Api.delete(`/code_comparisons/${comparisonId}/tags/${tagId}`);
-			comparisonTags[comparisonId] = comparisonTags[comparisonId].filter((t) => t.id !== tagId);
+			comparisonTags[comparisonId] = comparisonTags[comparisonId].filter(
+				(t: Tag) => t.id !== tagId
+			);
 		} catch (err) {
 			console.error('Failed to remove tag:', err);
 		}
@@ -295,10 +359,66 @@
 
 	$: {
 		Object.keys(tagSearchTerms).forEach((comparisonId) => {
-			if (tagSearchTerms[comparisonId]?.length >= 2) {
-				searchTags(comparisonId);
+			const id = parseInt(comparisonId);
+			if (tagSearchTerms[id]?.length >= 2) {
+				searchTags(id);
 			}
 		});
+	}
+
+	async function loadAnswerableOptions(comparisonId: number, tagId: number) {
+		try {
+			loadingAnswerableOptions[comparisonId] = true;
+			const response = await Api.get(`/tags/${tagId}/taggables`);
+			// Filter only Wonder and Skill items
+			answerableOptions[comparisonId] = response.items.filter(
+				(item: Taggable) => item.type === 'Skill' || item.type === 'Wonder'
+			);
+			showAnswerableDropdowns[comparisonId] = true;
+		} catch (err) {
+			console.error('Failed to load answerable options:', err);
+			answerableOptions[comparisonId] = [];
+		} finally {
+			loadingAnswerableOptions[comparisonId] = false;
+		}
+	}
+
+	async function attachAnswerable(comparisonId: number, answerable: Answerable) {
+		try {
+			await Api.post(`/code_comparisons/${comparisonId}/attach_answerable`, {
+				answerable_type: answerable.type.toLowerCase(),
+				answerable_id: answerable.id
+			});
+
+			// Update local state
+			codeComparisons = codeComparisons.map((c) => {
+				if (c.id === comparisonId) {
+					return { ...c, answerable };
+				}
+				return c;
+			});
+
+			showAnswerableDropdowns[comparisonId] = false;
+		} catch (err) {
+			console.error('Failed to attach answerable:', err);
+		}
+	}
+
+	async function detachAnswerable(comparisonId: number) {
+		try {
+			await Api.delete(`/code_comparisons/${comparisonId}/detach_answerable`);
+
+			// Update local state
+			codeComparisons = codeComparisons.map((c) => {
+				if (c.id === comparisonId) {
+					const { answerable, ...rest } = c;
+					return rest;
+				}
+				return c;
+			});
+		} catch (err) {
+			console.error('Failed to detach answerable:', err);
+		}
 	}
 
 	onMount(fetchComparisons);
@@ -442,6 +562,65 @@
 																					{result.title}
 																				</div>
 																			{/each}
+																		</div>
+																	{/if}
+																</div>
+															{/if}
+														</div>
+													{/if}
+
+													{#if $user?.admin}
+														<div class="answerable-section mt-2">
+															{#if comparison.answerable}
+																<div class="answerable-tag">
+																	<span>{comparison.answerable.title}</span>
+																	<button
+																		class="remove-tag"
+																		on:click={() => detachAnswerable(comparison.id)}
+																	>
+																		×
+																	</button>
+																</div>
+															{:else if comparisonTags[comparison.id]?.length > 0}
+																<div class="answerable-search">
+																	{#if !showAnswerableDropdowns[comparison.id]}
+																		<button
+																			class="btn btn-outline-primary btn-sm"
+																			on:click={() =>
+																				loadAnswerableOptions(
+																					comparison.id,
+																					comparisonTags[comparison.id][0].id
+																				)}
+																		>
+																			Add Answerable
+																		</button>
+																	{/if}
+																	{#if loadingAnswerableOptions[comparison.id]}
+																		<div
+																			class="spinner-border spinner-border-sm ms-2"
+																			role="status"
+																		>
+																			<span class="visually-hidden">Loading...</span>
+																		</div>
+																	{:else if showAnswerableDropdowns[comparison.id] && answerableOptions[comparison.id]?.length > 0}
+																		<div class="answerable-options">
+																			<div class="d-grid gap-2">
+																				{#each answerableOptions[comparison.id] as option}
+																					<button
+																						class="btn btn-outline-primary"
+																						on:click={() => attachAnswerable(comparison.id, option)}
+																					>
+																						{option.title}
+																					</button>
+																				{/each}
+																			</div>
+																			<button
+																				class="btn btn-link mt-2"
+																				on:click={() =>
+																					(showAnswerableDropdowns[comparison.id] = false)}
+																			>
+																				Cancel
+																			</button>
 																		</div>
 																	{/if}
 																</div>
@@ -754,5 +933,38 @@
 
 	.dropdown-item:hover {
 		background: #f8f9fa;
+	}
+
+	.answerable-section {
+		margin-top: 0.5rem;
+	}
+
+	.answerable-tag {
+		display: inline-flex;
+		align-items: center;
+		background: #e3f2fd;
+		padding: 4px 8px;
+		border-radius: 4px;
+		font-size: 0.9em;
+		gap: 4px;
+		border: 1px solid #90caf9;
+	}
+
+	.answerable-options {
+		margin-top: 1rem;
+	}
+
+	.answerable-options .btn {
+		text-align: left;
+		padding: 0.5rem 1rem;
+	}
+
+	.answerable-options .btn-link {
+		font-size: 0.9em;
+		text-decoration: none;
+	}
+
+	.answerable-options .btn-link:hover {
+		text-decoration: underline;
 	}
 </style>
