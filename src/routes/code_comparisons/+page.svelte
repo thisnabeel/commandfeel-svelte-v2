@@ -87,6 +87,12 @@
 
 	// Add this with other state variables at the top
 	let generatingExample = false;
+	let customPrompt = '';
+
+	// Add state for editing code blocks
+	let editingBlockId: number | null = null;
+	let editingBlockContent = '';
+	let editorInstances: { [key: number]: any } = {};
 
 	async function fetchComparisons() {
 		try {
@@ -277,7 +283,9 @@
 
 		try {
 			generatingExample = true;
-			const response = await Api.post('/code_comparisons/generate_solid_comparison');
+			const response = await Api.post('/code_comparisons/generate_solid_comparison', {
+				prompt: customPrompt.length > 0 ? customPrompt : undefined
+			});
 			const createdComparison = await Api.post('/code_comparisons', {
 				code_comparison: { title: response.code_comparison_title }
 			});
@@ -302,6 +310,9 @@
 					code_blocks: blocks
 				}
 			];
+
+			// Clear the prompt after successful generation
+			customPrompt = '';
 		} catch (err: any) {
 			error = err?.message || 'Failed to generate SOLID example';
 		} finally {
@@ -421,6 +432,50 @@
 		}
 	}
 
+	async function updateCodeBlock(blockId: number, content: string) {
+		try {
+			await Api.put(`/code_blocks/${blockId}`, {
+				code_block: { content }
+			});
+
+			// Update local state
+			codeComparisons = codeComparisons.map((comparison) => ({
+				...comparison,
+				code_blocks: comparison.code_blocks?.map((block) =>
+					block.id === blockId ? { ...block, content } : block
+				)
+			}));
+
+			// Reset editing state
+			if (editorInstances[blockId]) {
+				editorInstances[blockId].updateOptions({ readOnly: true });
+			}
+			editingBlockId = null;
+			editingBlockContent = '';
+		} catch (err: any) {
+			error = err?.message || 'Failed to update code block';
+		}
+	}
+
+	function startEditingBlock(block: CodeBlock) {
+		editingBlockId = block.id;
+		editingBlockContent = block.content;
+		// Update editor options after a brief delay to ensure the editor has updated
+		setTimeout(() => {
+			if (editorInstances[block.id]) {
+				editorInstances[block.id].updateOptions({ readOnly: false });
+			}
+		}, 0);
+	}
+
+	function cancelEditingBlock() {
+		if (editingBlockId && editorInstances[editingBlockId]) {
+			editorInstances[editingBlockId].updateOptions({ readOnly: true });
+		}
+		editingBlockId = null;
+		editingBlockContent = '';
+	}
+
 	onMount(fetchComparisons);
 </script>
 
@@ -438,21 +493,29 @@
 				<CardHeader>
 					<div class="d-flex justify-content-between align-items-center">
 						<h2 class="mb-0">Create New Code Comparison</h2>
-						<Button
-							color="warning"
-							on:click={generateSolidExample}
-							title="Generate SOLID Principle Example"
-							disabled={generatingExample}
-						>
-							{#if generatingExample}
-								<div class="spinner-border spinner-border-sm me-2" role="status">
-									<span class="visually-hidden">Loading...</span>
-								</div>
-								Generating...
-							{:else}
-								<i class="fa fa-bolt" /> Generate Example
-							{/if}
-						</Button>
+						<div class="d-flex align-items-center gap-2">
+							<Input
+								type="text"
+								placeholder="Custom prompt for example..."
+								bind:value={customPrompt}
+								style="width: 300px;"
+							/>
+							<Button
+								color="warning"
+								on:click={generateSolidExample}
+								title="Generate SOLID Principle Example"
+								disabled={generatingExample}
+							>
+								{#if generatingExample}
+									<div class="spinner-border spinner-border-sm me-2" role="status">
+										<span class="visually-hidden">Loading...</span>
+									</div>
+									Generating...
+								{:else}
+									<i class="fa fa-bolt" /> Generate Example
+								{/if}
+							</Button>
+						</div>
 					</div>
 				</CardHeader>
 				<CardBody>
@@ -668,19 +731,29 @@
 														<CodeEditor
 															height={`${block.content.split('\n').length * 22 + 16}px`}
 															defaultLanguage="javascript"
-															defaultValue={block.content}
+															defaultValue={editingBlockId === block.id
+																? editingBlockContent
+																: block.content}
 															wordWrap="on"
 															scrollBeyondLastLine={false}
-															options={{
-																readOnly: true,
-																minimap: { enabled: false },
-																lineNumbers: 'on',
-																lineHeight: 22,
-																padding: { top: 8, bottom: 8 },
-																scrollbar: {
-																	vertical: 'hidden',
-																	horizontal: 'hidden'
+															onChange={(value) => {
+																if (editingBlockId === block.id) {
+																	editingBlockContent = value;
 																}
+															}}
+															onMount={(editor) => {
+																editorInstances[block.id] = editor;
+																editor.updateOptions({
+																	readOnly: editingBlockId !== block.id,
+																	minimap: { enabled: false },
+																	lineNumbers: 'on',
+																	lineHeight: 22,
+																	padding: { top: 8, bottom: 8 },
+																	scrollbar: {
+																		vertical: 'hidden',
+																		horizontal: 'hidden'
+																	}
+																});
 															}}
 														/>
 														{#if $user?.admin}
@@ -688,13 +761,40 @@
 																<div class="drag-handle">
 																	<i class="fa fa-grip-vertical" />
 																</div>
-																<button
-																	class="delete-block-btn"
-																	on:click={() => deleteCodeBlock(comparison.id, block.id)}
-																	title="Delete code block"
-																>
-																	<i class="fa fa-times" />
-																</button>
+																{#if editingBlockId === block.id}
+																	<div class="edit-actions">
+																		<button
+																			class="save-block-btn"
+																			on:click={() =>
+																				updateCodeBlock(block.id, editingBlockContent)}
+																			title="Save changes"
+																		>
+																			<i class="fa fa-check" />
+																		</button>
+																		<button
+																			class="cancel-block-btn"
+																			on:click={cancelEditingBlock}
+																			title="Cancel editing"
+																		>
+																			<i class="fa fa-times" />
+																		</button>
+																	</div>
+																{:else}
+																	<button
+																		class="edit-block-btn"
+																		on:click={() => startEditingBlock(block)}
+																		title="Edit code block"
+																	>
+																		<i class="fa fa-edit" />
+																	</button>
+																	<button
+																		class="delete-block-btn"
+																		on:click={() => deleteCodeBlock(comparison.id, block.id)}
+																		title="Delete code block"
+																	>
+																		<i class="fa fa-trash" />
+																	</button>
+																{/if}
 															</div>
 														{/if}
 													</div>
@@ -845,17 +945,44 @@
 		color: #666;
 	}
 
-	.delete-block-btn {
+	.edit-actions {
+		display: flex;
+		flex-direction: column;
+		gap: 4px;
+	}
+
+	.edit-block-btn,
+	.delete-block-btn,
+	.save-block-btn,
+	.cancel-block-btn {
 		background: none;
 		border: none;
-		color: #dc3545;
 		cursor: pointer;
 		padding: 4px;
 		opacity: 0.6;
 		transition: opacity 0.2s;
 	}
 
-	.delete-block-btn:hover {
+	.edit-block-btn {
+		color: #416fff;
+	}
+
+	.save-block-btn {
+		color: #28a745;
+	}
+
+	.cancel-block-btn {
+		color: #6c757d;
+	}
+
+	.delete-block-btn {
+		color: #dc3545;
+	}
+
+	.edit-block-btn:hover,
+	.delete-block-btn:hover,
+	.save-block-btn:hover,
+	.cancel-block-btn:hover {
 		opacity: 1;
 	}
 

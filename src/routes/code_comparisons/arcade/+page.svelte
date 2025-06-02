@@ -29,6 +29,7 @@
 	}
 
 	interface CurrentQuestion {
+		id: number;
 		code_comparison_title: string;
 		code_blocks: Array<{ content: string }>;
 		tags?: Tag[];
@@ -51,6 +52,7 @@
 	let selectedOption: string | null = null;
 	let isCorrect: boolean | null = null;
 	let answerSubmitted = false;
+	let usedComparisonIds: number[] = [];
 
 	async function loadNewQuestion() {
 		try {
@@ -59,7 +61,10 @@
 			isCorrect = null;
 			answerSubmitted = false;
 			userAnswer = '';
-			currentQuestion = await Api.get('/code_comparisons/arcade');
+			currentQuestion = await Api.get(`/code_comparisons/arcade?used_ids=${usedComparisonIds}`);
+			usedComparisonIds = [...usedComparisonIds, currentQuestion?.id];
+			console.log({ usedComparisonIds });
+
 			if (currentQuestion?.tags) {
 				await loadTaggables(currentQuestion.tags[0].id);
 			}
@@ -95,6 +100,7 @@
 
 		if (isCorrect) {
 			streak++;
+			// Add current question ID to used IDs when answered correctly
 		} else {
 			streak = 0;
 		}
@@ -125,7 +131,7 @@
 		<Card class="mb-4">
 			<CardHeader>
 				<div class="d-flex justify-content-between align-items-center">
-					<h2 class="mb-0">SOLID Principles Arcade</h2>
+					<h2 class="mb-0">Arcade</h2>
 					<div class="streak">Streak: {streak}</div>
 				</div>
 			</CardHeader>
@@ -148,7 +154,7 @@
 										class:active={activeCodeTab === i}
 										on:click={() => switchCodeTab(i)}
 									>
-										Code Block {i + 1}
+										{i === 0 ? 'Before' : 'After'}
 									</button>
 								{/each}
 							</div>
@@ -240,7 +246,6 @@
 								</Form>
 							{/if}
 							<div class="d-flex mt-3 gap-2">
-								<Button color="secondary" on:click={nextQuestion}>Skip</Button>
 								{#if answerSubmitted}
 									<Button color="primary" on:click={nextQuestion}>Next Question</Button>
 								{/if}
@@ -341,6 +346,10 @@
 
 	:global(.monaco-editor) {
 		padding: 0 !important;
+	}
+
+	.code-block :global(.editor) {
+		border: none;
 	}
 
 	@media (max-width: 768px) {
