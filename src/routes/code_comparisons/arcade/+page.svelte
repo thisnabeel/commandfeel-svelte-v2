@@ -18,6 +18,7 @@
 	import { user } from '$lib/stores/user';
 	import Swal from 'sweetalert2';
 	import { credsView } from '$lib/stores/user';
+	import { showGuide, showGuideButton } from '$lib/stores/view';
 
 	interface Tag {
 		id: number;
@@ -142,7 +143,10 @@
 		activeCodeTab = index;
 	}
 
-	onMount(loadNewQuestion);
+	onMount(() => {
+		showGuideButton.set(false);
+		loadNewQuestion();
+	});
 </script>
 
 <div class="wrapper" in:fade>
