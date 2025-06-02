@@ -2,10 +2,11 @@
 	import SkillsBar from './SkillsBar/SkillsBar.svelte';
 	import LanguagesBar from './LanguagesBar/LanguagesBar.svelte';
 	import Bar from './Bar.svelte';
-	import { globalViewCategory } from '$lib/stores/view';
+	import { globalViewCategory, headerSubtitle } from '$lib/stores/view';
 	import { modals } from 'svelte-modals';
 	import TikTokModal from '$lib/modals/tiktok/Modal.svelte';
 	import { user } from '$lib/stores/user';
+	import { onMount, onDestroy } from 'svelte';
 
 	function switchBar() {
 		$globalViewCategory === 'Languages'
@@ -24,7 +25,7 @@
 <div class="cta-container">
 	<div class="cta-content">
 		<h1 class="space-grotesk-heading">The Software Engineering Gym</h1>
-		<p class="cta-subtitle">Try a Quest:</p>
+		<p class="cta-subtitle">{$headerSubtitle}</p>
 	</div>
 	<div class="cta-background"></div>
 </div>

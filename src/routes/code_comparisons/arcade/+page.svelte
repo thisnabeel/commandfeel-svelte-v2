@@ -15,6 +15,9 @@
 		Input
 	} from 'sveltestrap';
 	import CodeEditor from '$lib/components/CodeEditor/CodeEditor.svelte';
+	import { user } from '$lib/stores/user';
+	import Swal from 'sweetalert2';
+	import { credsView } from '$lib/stores/user';
 
 	interface Tag {
 		id: number;
@@ -91,7 +94,29 @@
 		}
 	}
 
+	async function gate() {
+		if (!$user) {
+			const result = await Swal.fire({
+				title: 'Quick Sign Up Required',
+				text: 'Sign up for free in seconds to start playing this quest!',
+				icon: 'info',
+				showCancelButton: true,
+				confirmButtonText: 'Sign Up',
+				cancelButtonText: 'Maybe Later',
+				confirmButtonColor: '#3085d6',
+				cancelButtonColor: '#d33'
+			});
+
+			if (result.isConfirmed) {
+				credsView.set('signUp');
+			}
+		}
+	}
 	function checkAnswer(selectedTitle: string) {
+		gate();
+		if (!$user) {
+			return;
+		}
 		if (answerSubmitted) return; // Prevent further clicks after answer is submitted
 
 		selectedOption = selectedTitle;
@@ -122,11 +147,13 @@
 
 <div class="wrapper" in:fade>
 	<Container class="cont-wrapper py-4">
-		{#if error}
+		{#if error && $user && $user.admin}
 			<div class="alert alert-danger" role="alert">
 				<p class="font-medium">{error}</p>
 			</div>
 		{/if}
+
+		<h1 class="">Practicing SOLID Principles</h1>
 
 		<Card class="mb-4">
 			<CardHeader>
@@ -160,6 +187,7 @@
 							</div>
 							{#each currentQuestion.code_blocks as block, i}
 								<div class="code-block" class:active-block={activeCodeTab === i}>
+									<h1 class="code-block-title not-mobile">{i === 0 ? 'Before' : 'After'}</h1>
 									<CodeEditor
 										height={`${block.content.split('\n').length * 22 + 32}px`}
 										defaultLanguage="ruby"
@@ -330,6 +358,7 @@
 
 	:global(.options-container .btn:hover) {
 		background-color: #e9ecef;
+		color: blue;
 	}
 
 	.text-muted {
@@ -377,6 +406,14 @@
 		.wrapper {
 			padding: 0;
 		}
+
+		.not-mobile {
+			display: none;
+		}
+	}
+	.code-block-title {
+		display: block;
+		color: #fff !important;
 	}
 
 	@media (min-width: 769px) {
@@ -392,14 +429,26 @@
 	}
 
 	:global(.options-container .btn-success) {
-		background-color: #28a745;
-		color: white;
-		border-color: #28a745;
+		background-color: #28a745 !important;
+		color: white !important;
+		border-color: #28a745 !important;
+	}
+
+	:global(.options-container .btn-success:hover) {
+		background-color: #28a745 !important;
+		color: white !important;
+		border-color: #28a745 !important;
 	}
 
 	:global(.options-container .btn-danger) {
-		background-color: #dc3545;
-		color: white;
-		border-color: #dc3545;
+		background-color: #dc3545 !important;
+		color: white !important;
+		border-color: #dc3545 !important;
+	}
+
+	:global(.options-container .btn-danger:hover) {
+		background-color: #dc3545 !important;
+		color: white !important;
+		border-color: #dc3545 !important;
 	}
 </style>

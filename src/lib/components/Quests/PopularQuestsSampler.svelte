@@ -1,15 +1,19 @@
 <script>
-	import { onMount } from 'svelte';
+	import { onDestroy, onMount } from 'svelte';
 	import Api from '$lib/api/api';
 	import { user } from '$lib/stores/user';
 	import { credsView } from '$lib/stores/user';
 	import Swal from 'sweetalert2';
 	import { goto } from '$app/navigation';
 
+	import { headerSubtitle } from '$lib/stores/view';
+
 	let quests = [];
 	let loading = true;
 
 	onMount(async () => {
+		headerSubtitle.set('Try a Quest:');
+
 		let url = '/quests/popular';
 		if ($user?.admin) {
 			url = '/quests/popular?admin=true';
@@ -21,6 +25,10 @@
 		} finally {
 			loading = false;
 		}
+	});
+
+	onDestroy(() => {
+		headerSubtitle.set('');
 	});
 
 	async function handleQuestClick(questId) {
