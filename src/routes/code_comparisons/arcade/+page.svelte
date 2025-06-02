@@ -115,7 +115,7 @@
 </script>
 
 <div class="wrapper" in:fade>
-	<Container class="py-4">
+	<Container class="cont-wrapper py-4">
 		{#if error}
 			<div class="alert alert-danger" role="alert">
 				<p class="font-medium">{error}</p>
@@ -344,6 +344,9 @@
 	}
 
 	@media (max-width: 768px) {
+		:global(.cont-wrapper) {
+			padding: 0 !important;
+		}
 		.mobile-nav {
 			display: flex;
 			gap: 4px;
