@@ -5,11 +5,19 @@
 	import Api from '$lib/api/api.js';
 
 	import Challenge from './Challenge.svelte';
+	import { onMount } from 'svelte';
+	onMount(async () => {
+		element.challenges = await Api.get(`/${elementType}/${element.id}/challenges`);
+	});
+
+	function getElementType() {
+		return elementType[0].toUpperCase() + elementType.slice(1, -1);
+	}
 
 	const addChallenge = async () => {
 		const response = await Api.post('/challenges.json', {
 			challengeable_id: element.id,
-			challengeable_type: 'Element'
+			challengeable_type: getElementType()
 		});
 
 		element.challenges = [...element.challenges, response];
@@ -21,7 +29,7 @@
 	};
 
 	const generateChallenge = async () => {
-		const response = await Api.post('/elements/generate_challenge.json', {
+		const response = await Api.post(`/${elementType}/generate_challenge.json`, {
 			id: element.id
 		});
 

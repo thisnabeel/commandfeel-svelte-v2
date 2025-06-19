@@ -1,19 +1,23 @@
-<script>
+<script lang="ts">
 	import { slide, scale } from 'svelte/transition';
 	import QuestStepRow from '$lib/components/Skills/Tabs/Quests/QuestStep/row.svelte';
+	import QuestStepChoices from '$lib/components/Quests/QuestStepChoices.svelte';
 	import { goto } from '$app/navigation';
 	import API from '$lib/api/api';
+	import { hookedOn, hookTied } from './quest-store';
 
-	export let quest;
-	export let elementType;
-	export let onDelete = () => {}; // Optional callback for deletion
+	export let quest: any;
+	export let elementType: string;
+	export let onDelete: (id: number) => void = () => {}; // Optional callback for deletion
 
-	let selectedQuest = null;
-	let questSteps = [];
-	let editingStep = null;
-	let successNodeIn = null;
+	let selectedQuest: any = null;
+	let questSteps: any[] = [];
+	let editingStep: any = null;
+	let successNodeIn: any = null;
 	let loadingSteps = false;
 	let error = '';
+	let skillId: string | null = null;
+	let selectedStepTab: any = null;
 
 	let newStep = {
 		image_url: '',
@@ -26,7 +30,7 @@
 	};
 
 	// Quest Steps Management
-	async function toggleQuestSteps(quest) {
+	async function toggleQuestSteps(quest: any) {
 		if (selectedQuest?.id === quest.id) {
 			closeQuestSteps();
 		} else {
@@ -39,17 +43,24 @@
 		questSteps = [];
 		editingStep = null;
 		successNodeIn = null;
+		selectedStepTab = null;
 	}
 
-	async function openQuestSteps(quest) {
+	async function openQuestSteps(quest: any) {
 		selectedQuest = quest;
 		loadingSteps = true;
 		try {
-			const endpoint = quest.questable.id
+			const endpoint = quest.questable?.id
 				? `/${elementType}/${quest.questable.id}/quests/${quest.id}/quest_steps`
 				: `/quests/${quest.id}/quest_steps`;
+			console.log('openQuestSteps', quest);
 			questSteps = await API.get(endpoint);
-		} catch (err) {
+			// Set the first step as selected tab
+			if (questSteps.length > 0) {
+				selectedStepTab = questSteps[0];
+			}
+		} catch (err: any) {
+			console.error('openQuestSteps', [quest, err]);
 			error = err.message || 'An error occurred while fetching quest steps';
 			closeQuestSteps();
 		} finally {
@@ -59,6 +70,7 @@
 
 	async function createStep() {
 		if (!selectedQuest) return;
+
 		try {
 			const endpoint = skillId
 				? `/skills/${skillId}/quests/${selectedQuest.id}/quest_steps`
@@ -68,12 +80,22 @@
 			});
 			questSteps = [...questSteps, res];
 			resetNewStep();
-		} catch (err) {
+			return res;
+		} catch (err: any) {
+			console.error('createStep', [quest, err]);
 			error = err.message || 'An error occurred while creating step';
+			throw err;
 		}
 	}
 
-	function editStep(step) {
+	async function makeNewStepFromChoice(choice: any) {
+		console.log('makeNewStepFromChoice', choice);
+		newStep.body = choice.body;
+		const res = await createStep();
+		hookTied.set(res.id);
+	}
+
+	function editStep(step: any) {
 		editingStep = { ...step };
 	}
 
@@ -87,12 +109,12 @@
 			const index = questSteps.findIndex((s) => s.id === editingStep.id);
 			if (index !== -1) questSteps[index] = { ...editingStep };
 			editingStep = null;
-		} catch (err) {
+		} catch (err: any) {
 			error = err.message || 'An error occurred while updating step';
 		}
 	}
 
-	async function deleteStep(stepId) {
+	async function deleteStep(stepId: number) {
 		if (!selectedQuest) return;
 		try {
 			const endpoint = quest.skill_id
@@ -100,7 +122,7 @@
 				: `/quests/${selectedQuest.id}/quest_steps/${stepId}`;
 			await API.delete(endpoint);
 			questSteps = questSteps.filter((s) => s.id !== stepId);
-		} catch (err) {
+		} catch (err: any) {
 			error = err.message || 'An error occurred while deleting step';
 		}
 	}
@@ -117,11 +139,11 @@
 		};
 	}
 
-	function selectSuccessNodeIn(step) {
+	function selectSuccessNodeIn(step: any) {
 		successNodeIn = step;
 	}
 
-	async function selectSuccessNodeOut(step) {
+	async function selectSuccessNodeOut(step: any) {
 		if (!selectedQuest || !successNodeIn) return;
 
 		try {
@@ -134,12 +156,12 @@
 			});
 			questSteps = questSteps.map((s) => (s.id === successNodeIn.id ? { ...successNodeIn } : s));
 			successNodeIn = null;
-		} catch (err) {
+		} catch (err: any) {
 			error = err.message || 'An error occurred while updating step connection';
 		}
 	}
 
-	async function handleImageUpload(event, step) {
+	async function handleImageUpload(event: any, step: any) {
 		if (!selectedQuest) return;
 
 		const file = event.target.files[0];
@@ -161,25 +183,29 @@
 				questSteps[index] = { ...questSteps[index], image_url: res.image_url };
 				questSteps = [...questSteps];
 			}
-		} catch (err) {
+		} catch (err: any) {
 			error = err.message || 'An error occurred while uploading image';
 		}
 	}
 
-	function playQuest(quest) {
+	function playQuest(quest: any) {
 		goto(`/quests/${quest.id}/play`);
 	}
 
-	async function generateQuestSteps(quest, level) {
+	async function generateQuestSteps(quest: any, level: string) {
 		try {
 			loadingSteps = true;
 			await API.post(`/quests/${quest.id}/quest_wizard`, { level });
 			await openQuestSteps(quest);
-		} catch (err) {
+		} catch (err: any) {
 			error = err.message || 'Failed to generate quest steps';
 		} finally {
 			loadingSteps = false;
 		}
+	}
+
+	function selectStepTab(step: any) {
+		selectedStepTab = step;
 	}
 </script>
 
@@ -248,32 +274,96 @@
 				</div>
 			{/if}
 
-			<table class="steps-table">
-				<thead>
-					<tr>
-						<th>Position</th>
-						<th>Image</th>
-						<th>Body</th>
-						<th>Success Step ID</th>
-						<th>Failure Step ID</th>
-						<th>Actions</th>
-					</tr>
-				</thead>
-				<tbody>
-					{#each questSteps as step, index}
-						<QuestStepRow
-							{step}
-							{index}
-							{successNodeIn}
-							{selectSuccessNodeIn}
-							{selectSuccessNodeOut}
-							{handleImageUpload}
-							on:edit={() => editStep(step)}
-							on:delete={() => deleteStep(step.id)}
-						/>
-					{/each}
-				</tbody>
-			</table>
+			<!-- Quest Steps Tabs -->
+			{#if questSteps.length > 0}
+				<div class="steps-tabs-container">
+					<div class="steps-tabs-scroll">
+						<div class="steps-tabs">
+							{#each questSteps as step, index}
+								<button
+									class="step-tab"
+									class:hook-ready={$hookedOn}
+									class:active={selectedStepTab?.id === step.id}
+									on:click={() => {
+										if ($hookedOn) {
+											hookTied.set(step.id);
+										} else {
+											selectStepTab(step);
+										}
+									}}
+								>
+									<span class="step-number">{step.position}</span>
+									<span class="step-title">{step.body.slice(0, 30)}...</span>
+								</button>
+							{/each}
+						</div>
+					</div>
+
+					<!-- Selected Step Content -->
+					{#if selectedStepTab}
+						<div class="step-content" transition:slide>
+							<div class="step-header">
+								<h4>Step {selectedStepTab.position}</h4>
+								<div class="step-actions">
+									<button class="btn-secondary" on:click={() => editStep(selectedStepTab)}
+										>Edit</button
+									>
+									<button class="btn-danger" on:click={() => deleteStep(selectedStepTab.id)}
+										>Delete</button
+									>
+								</div>
+							</div>
+
+							<div class="step-body">
+								<p class="step-text">{selectedStepTab.body}</p>
+
+								{#if selectedStepTab.image_url}
+									<div class="step-image-container">
+										<img src={selectedStepTab.image_url} alt="Step Image" class="step-image" />
+									</div>
+								{/if}
+
+								<div class="step-details">
+									<div class="detail-item">
+										<strong>Success Step ID:</strong>
+										{selectedStepTab.success_step_id || 'None'}
+									</div>
+									<div class="detail-item">
+										<strong>Failure Step ID:</strong>
+										{selectedStepTab.failure_step_id || 'None'}
+									</div>
+									<div class="detail-item">
+										<strong>Quest Reward ID:</strong>
+										{selectedStepTab.quest_reward_id || 'None'}
+									</div>
+								</div>
+
+								<!-- Image Upload Section -->
+								<div class="image-upload-section">
+									<h5>Step Image</h5>
+									<div class="image-actions">
+										<input
+											type="file"
+											class="file-input"
+											on:change={(e) => handleImageUpload(e, selectedStepTab)}
+											accept="image/*"
+										/>
+										<label for="file-input" class="file-label">Choose Image</label>
+									</div>
+								</div>
+							</div>
+						</div>
+					{/if}
+				</div>
+			{/if}
+
+			<!-- Quest Step Choices Management -->
+			{#if selectedStepTab}
+				<div class="choices-management-container" transition:slide>
+					<h4>Choices for Step {selectedStepTab.position}</h4>
+					<QuestStepChoices questStepId={selectedStepTab.id} {makeNewStepFromChoice} />
+				</div>
+			{/if}
 
 			{#if editingStep}
 				<div class="step-form">
@@ -427,6 +517,29 @@
 	.quest-actions {
 		display: flex;
 		gap: 0.5rem;
+	}
+
+	.hook-ready {
+		display: inline-block;
+		animation: vibrate 0.4s linear infinite;
+	}
+
+	@keyframes vibrate {
+		0% {
+			transform: translate(0);
+		}
+		25% {
+			transform: translate(-0.5px, 0.5px);
+		}
+		50% {
+			transform: translate(0.5px, -0.5px);
+		}
+		75% {
+			transform: translate(-0.5px, -0.5px);
+		}
+		100% {
+			transform: translate(0.5px, 0.5px);
+		}
 	}
 
 	.btn-primary {
@@ -595,5 +708,136 @@
 		padding: 3rem;
 		color: #7f8c8d;
 		font-size: 1.125rem;
+	}
+
+	.choices-management-container {
+		background: #f8f9fa;
+		padding: 1.5rem;
+		border-radius: 8px;
+		margin-bottom: 1.5rem;
+		border: 1px solid #dee2e6;
+	}
+
+	.choices-management-container h4 {
+		margin: 0 0 1rem;
+		color: #2c3e50;
+		font-size: 1.1rem;
+	}
+
+	.choices-actions {
+		margin-top: 1rem;
+		text-align: right;
+	}
+
+	.steps-tabs-container {
+		position: relative;
+		margin-bottom: 2rem;
+	}
+
+	.steps-tabs-scroll {
+		overflow-x: auto;
+		padding: 0.5rem;
+	}
+
+	.steps-tabs {
+		display: flex;
+		gap: 0.5rem;
+	}
+
+	.step-tab {
+		background: #f8f9fa;
+		border: none;
+		padding: 0.75rem 1rem;
+		border-radius: 4px;
+		cursor: pointer;
+		transition: background-color 0.2s;
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		min-width: 120px;
+		white-space: nowrap;
+	}
+
+	.step-tab:hover {
+		background: #e9e9e9;
+	}
+
+	.step-tab.active {
+		background: #3498db;
+		color: white;
+	}
+
+	.step-number {
+		font-weight: bold;
+		font-size: 1.1rem;
+		margin-bottom: 0.25rem;
+	}
+
+	.step-title {
+		font-size: 0.8rem;
+		text-align: center;
+		line-height: 1.2;
+	}
+
+	.step-content {
+		background: #fff;
+		border-radius: 8px;
+		box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+		padding: 1.5rem;
+	}
+
+	.step-header {
+		display: flex;
+		justify-content: space-between;
+		align-items: center;
+		margin-bottom: 1rem;
+	}
+
+	.step-actions {
+		display: flex;
+		gap: 0.5rem;
+	}
+
+	.step-text {
+		margin-bottom: 1rem;
+	}
+
+	.step-image-container {
+		margin-bottom: 1rem;
+	}
+
+	.step-image {
+		width: 100%;
+		max-height: 300px;
+		object-fit: cover;
+	}
+
+	.step-details {
+		margin-bottom: 1rem;
+	}
+
+	.detail-item {
+		margin-bottom: 0.5rem;
+	}
+
+	.image-upload-section {
+		margin-top: 1rem;
+	}
+
+	.image-actions {
+		display: flex;
+		gap: 0.5rem;
+	}
+
+	.file-input {
+		display: none;
+	}
+
+	.file-label {
+		background: #3498db;
+		color: white;
+		padding: 0.5rem 1rem;
+		border-radius: 4px;
+		cursor: pointer;
 	}
 </style>

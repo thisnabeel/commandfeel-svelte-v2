@@ -1,10 +1,16 @@
 <script>
 	import PopularQuestsSampler from '$lib/components/Quests/PopularQuestsSampler.svelte';
+	import { user } from '$lib/stores/user';
+	import QuestsAdmin from '$lib/components/Quests/Admin/Index.svelte';
 </script>
 
 <div class="container mt-5">
-	<h1 class="mb-4">Popular Quests</h1>
-	<PopularQuestsSampler />
+	<!-- <h1 class="mb-4">Popular Quests</h1> -->
+	<!-- <PopularQuestsSampler /> -->
+	{#if $user && $user.admin}
+		<h1>Admin</h1>
+		<QuestsAdmin />
+	{/if}
 </div>
 
 <style>

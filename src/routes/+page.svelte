@@ -13,7 +13,8 @@
 	import AlgorithmsHome from '$lib/components/Algorithms/Landing/Index.svelte';
 	import { afterNavigate } from '$app/navigation';
 	import TikTokQuiz from '$lib/components/TikTokQuiz/TikTokQuiz.svelte';
-
+	import GettingStarted from '$lib/components/Landing/GettingStarted.svelte';
+	import { user } from '$lib/stores/user';
 	const fetchPopularWonders = async () => {
 		const response = await Api.get('/museum.json');
 		let json = response;
@@ -57,15 +58,21 @@
 </div>
 <br /> -->
 
-{#if $globalViewCategory === 'Skills'}
+<!-- {#if $globalViewCategory === 'Skills'}
 	<Tester prefillers={['SOLID Principles', 'DevOps']} />
-{/if}
+{/if} -->
 
-{#if $globalViewCategory === 'Languages'}
+<!-- {#if $globalViewCategory === 'Languages'}
 	<AlgorithmsHome />
+{/if} -->
+
+{#if $user && $user.admin}
+	<GettingStarted autoStart={true} />
+{:else}
+	<PopularQuestsSampler />
 {/if}
 
-<PopularQuestsSampler />
+<!-- <PopularQuestsSampler /> -->
 
 <style>
 	.intro {

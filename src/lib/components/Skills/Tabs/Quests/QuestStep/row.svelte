@@ -30,6 +30,7 @@
 
 	const emitEdit = () => dispatch('edit', step);
 	const emitDelete = () => dispatch('delete', step.id);
+	const emitToggleChoices = () => dispatch('toggleChoicesManagement', step);
 
 	async function generateImage(prompt: string) {
 		try {
@@ -137,6 +138,7 @@
 
 	<td class="actions">
 		<button class="btn-secondary" on:click={emitEdit}>Edit</button>
+		<button class="btn-info" on:click={emitToggleChoices}>Choices</button>
 		<button class="btn-danger" on:click={emitDelete}>Delete</button>
 	</td>
 </tr>
@@ -206,6 +208,21 @@
 	.actions {
 		display: flex;
 		gap: 0.5rem;
+	}
+
+	.btn-info {
+		background: #17a2b8;
+		color: white;
+		border: none;
+		padding: 0.5rem 1rem;
+		border-radius: 4px;
+		cursor: pointer;
+		font-size: 0.875rem;
+		transition: background-color 0.2s;
+	}
+
+	.btn-info:hover {
+		background: #138496;
 	}
 
 	td {

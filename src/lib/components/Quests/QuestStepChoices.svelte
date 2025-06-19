@@ -1,9 +1,10 @@
 <script>
 	import { slide } from 'svelte/transition';
 	import API from '$lib/api/api';
+	import { hookedOn, hookTied } from './quest-store';
 
 	export let questStepId;
-
+	export let makeNewStepFromChoice = () => {};
 	let choices = [];
 	let newChoice = {
 		body: '',
@@ -12,6 +13,26 @@
 	};
 	let loading = true;
 	let error = null;
+
+	$: {
+		if ($hookTied) {
+			const choice = choices.find((c) => c.id === $hookedOn?.id);
+			if (choice) {
+				hookTiedToNextStep(choice);
+			}
+		}
+	}
+
+	async function hookTiedToNextStep(choice) {
+		const res = await API.put(`/quest_step_choices/${choice.id}`, {
+			next_step_id: $hookTied
+		});
+		console.log('res', res);
+
+		choices = choices.map((c) => (c.id === choice.id ? res : c));
+		hookedOn.set(null);
+		hookTied.set(null);
+	}
 
 	async function loadChoices() {
 		try {
@@ -89,6 +110,9 @@
 			{#each choices as choice (choice.id)}
 				<div class="choice-item" transition:slide>
 					<div class="input-group mb-2">
+						<button class="btn btn-outline-danger" on:click={() => deleteChoice(choice.id)}>
+							×
+						</button>
 						<input
 							type="text"
 							class="form-control"
@@ -97,16 +121,39 @@
 							placeholder="Enter choice text"
 						/>
 						<div class="input-group-append">
+							<!-- svelte-ignore a11y_consider_explicit_label -->
 							<button
-								class="btn {choice.status ? 'btn-success' : 'btn-outline-success'}"
-								on:click={() => updateChoice({ ...choice, status: !choice.status })}
-								title={choice.status ? 'Correct answer' : 'Wrong answer'}
+								class="btn btn-outline-secondary"
+								class:btn-warning={$hookedOn && $hookedOn.id === choice.id}
+								class:btn-success={choice.next_step_id}
+								title="Link to next step"
+								on:click={() => {
+									$hookedOn && $hookedOn.id === choice.id
+										? ($hookedOn = null)
+										: ($hookedOn = choice);
+								}}
 							>
-								{choice.status ? '✓' : '✗'}
+								<i class="fa fa-link"></i>
 							</button>
-							<button class="btn btn-outline-danger" on:click={() => deleteChoice(choice.id)}>
-								×
-							</button>
+							{#if !choices.some((c) => c.next_step_id)}
+								{#if $hookedOn?.id !== choice.id}
+									<button
+										class="btn {choice.status ? 'btn-success' : 'btn-outline-success'}"
+										on:click={() => updateChoice({ ...choice, status: !choice.status })}
+										title={choice.status ? 'Correct answer' : 'Wrong answer'}
+									>
+										{choice.status ? '✓' : '✗'}
+									</button>
+								{/if}
+							{/if}
+							{#if $hookedOn && $hookedOn.id === choice.id && !choice.next_step_id}
+								<button
+									class="btn btn-outline-primary"
+									on:click={() => makeNewStepFromChoice(choice)}
+								>
+									<i class="fa fa-upload"></i>
+								</button>
+							{/if}
 						</div>
 					</div>
 				</div>

@@ -22,14 +22,6 @@
 	/>
 </svelte:head>
 
-<div class="cta-container">
-	<div class="cta-content">
-		<h1 class="space-grotesk-heading">The Software Engineering Gym</h1>
-		<p class="cta-subtitle">{$headerSubtitle}</p>
-	</div>
-	<div class="cta-background"></div>
-</div>
-
 <section class:hidden={!$user?.admin}>
 	<i
 		class="fa fa-flask"
