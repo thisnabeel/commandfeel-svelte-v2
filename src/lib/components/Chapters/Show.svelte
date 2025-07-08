@@ -47,7 +47,7 @@
 <section class="wrapper">
 	<h1 class="title">{chapter.title}</h1>
 
-	<div class="flex">
+	<div class="flex" style="width: 100%; overflow-x: scroll">
 		{#each tabs as tab}
 			<div class="tab" class:active={activeTab === tab} on:click={() => (activeTab = tab)}>
 				{tab}

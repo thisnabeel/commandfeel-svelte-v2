@@ -116,7 +116,7 @@
 		</div>
 	{/if}
 
-	<div class="flex">
+	<div class="flex" style="width: 100%; overflow-x: scroll">
 		{#each $user?.admin ? admin_tabs : tabs as tab}
 			<div class="tab" class:active={activeTab === tab} on:click={() => (activeTab = tab)}>
 				{tab}

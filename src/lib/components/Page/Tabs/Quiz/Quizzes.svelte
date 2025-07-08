@@ -68,7 +68,7 @@
 		<div class="adder">
 			<div class="add-quiz btn btn-outline-warning" on:click={addQuizSet}>+</div>
 		</div>
-		<div class="adder flex">
+		<div class="adder flex" style="width: 100%; overflow-x: scroll;">
 			{#each suggestedTitles.filter((t) => !element.quiz_sets
 						.map((s) => s.title)
 						.includes(t)) as title}
