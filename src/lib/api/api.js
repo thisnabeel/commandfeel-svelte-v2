@@ -3,8 +3,8 @@ import axios from 'axios';
 import { csrf_token } from '$lib/stores/api.js';
 import storage from '$lib/stores/storage';
 
-// const baseURL = import.meta.env.PROD ? import.meta.env.VITE_API_URL : import.meta.env.VITE_API_URL;
-const baseURL = 'http://localhost:3000';
+const baseURL = import.meta.env.PROD ? import.meta.env.VITE_API_URL : import.meta.env.VITE_API_URL;
+// const baseURL = 'http://localhost:3000';
 console.log({ baseURL });
 
 // Create a instance of axios to use the same base url.
