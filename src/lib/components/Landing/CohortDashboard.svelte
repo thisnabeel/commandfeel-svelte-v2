@@ -5,10 +5,13 @@
 	import QuestionsPanel from '$lib/components/Questions/QuestionsPanel.svelte';
 	import PendingEvidencesPanel from '$lib/components/Evidence/PendingEvidencesPanel.svelte';
 	import ResumeBulletsPanel from '$lib/components/Evidence/ResumeBulletsPanel.svelte';
+	import JoinOpenSeats from '$lib/components/Landing/JoinOpenSeats.svelte';
 	import { countBadgeWorthy } from '$lib/questions/badgeCounts.js';
 
 	export let memberships = [];
 	export let adminPreview = false;
+	/** Notify parent after joining so /mine can reload */
+	export let onJoined = (_seat) => {};
 
 	let panelTab = 'vocabulary';
 	let vocabLoadedFor = null;
@@ -498,7 +501,7 @@
 				</section>
 			{/if}
 		{:else}
-			<p class="lede">You're signed in. Cohort details will show here once you're enrolled.</p>
+			<JoinOpenSeats {onJoined} />
 		{/if}
 
 		{#if memberships.length > 1}

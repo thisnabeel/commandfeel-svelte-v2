@@ -30,6 +30,8 @@
 	let savingBulletId = null;
 	/** @type {number|string|null} */
 	let deletingBulletId = null;
+	/** @type {number|string|null} */
+	let copiedBulletId = null;
 
 	function bulletsOf(ev) {
 		return Array.isArray(ev?.evidence_bullets) ? ev.evidence_bullets : [];
@@ -149,6 +151,20 @@
 		}
 	}
 
+	async function copyBullet(bullet) {
+		const text = (bullet?.body || '').trim();
+		if (!text || !navigator?.clipboard?.writeText) return;
+		try {
+			await navigator.clipboard.writeText(text);
+			copiedBulletId = bullet.id;
+			setTimeout(() => {
+				if (copiedBulletId === bullet.id) copiedBulletId = null;
+			}, 1600);
+		} catch {
+			/* ignore */
+		}
+	}
+
 	async function deleteBullet(ev, bullet) {
 		if (!bullet?.id || deletingBulletId) return;
 		try {
@@ -247,6 +263,21 @@
 										{:else}
 											<p class="bullet-text">{bullet.body}</p>
 											<div class="bullet-actions">
+												<button
+													type="button"
+													class="icon-btn"
+													class:copied={copiedBulletId === bullet.id}
+													title={copiedBulletId === bullet.id ? 'Copied' : 'Copy to clipboard'}
+													aria-label={copiedBulletId === bullet.id
+														? 'Copied'
+														: 'Copy bullet to clipboard'}
+													on:click={() => copyBullet(bullet)}
+												>
+													<i
+														class="fa {copiedBulletId === bullet.id ? 'fa-check' : 'fa-copy'}"
+														aria-hidden="true"
+													/>
+												</button>
 												<button
 													type="button"
 													class="icon-btn"
@@ -454,6 +485,10 @@
 
 	.icon-btn:hover {
 		background: rgba(10, 95, 99, 0.1);
+	}
+
+	.icon-btn.copied {
+		color: #15803d;
 	}
 
 	.icon-btn.danger {

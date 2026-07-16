@@ -1,6 +1,5 @@
 <script>
 	import Api from '$lib/api/api.js';
-	import PopularQuestsSampler from '$lib/components/Quests/PopularQuestsSampler.svelte';
 	import CohortIntroCard from '$lib/components/Landing/CohortIntroCard.svelte';
 	import CohortDashboard from '$lib/components/Landing/CohortDashboard.svelte';
 	import { user } from '$lib/stores/user';
@@ -16,12 +15,17 @@
 			return;
 		}
 		try {
-			memberships = await Api.get('/cohort_users/mine');
+			const list = await Api.get('/cohort_users/mine');
+			memberships = Array.isArray(list) ? list : [];
 		} catch {
 			memberships = [];
 		} finally {
 			membershipsLoaded = true;
 		}
+	}
+
+	async function onJoined(_seat) {
+		await loadMemberships();
 	}
 
 	$: {
@@ -32,7 +36,7 @@
 		}
 	}
 
-	$: inCohort = membershipsLoaded && memberships.length > 0;
+	$: signedInReady = !!$user && membershipsLoaded;
 </script>
 
 <svelte:head>
@@ -40,10 +44,8 @@
 	<meta name="description" content="commandfeel" />
 </svelte:head>
 
-{#if $user && inCohort}
-	<CohortDashboard {memberships} />
-{:else if $user && $user.admin}
-	<PopularQuestsSampler />
+{#if signedInReady}
+	<CohortDashboard {memberships} {onJoined} />
 {:else if membershipsLoaded}
 	<CohortIntroCard />
 {/if}
