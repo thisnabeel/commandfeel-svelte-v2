@@ -1,11 +1,13 @@
 <script>
 	import { showGuide, showGuideButton } from '$lib/stores/view';
+	import { showGuideFlag } from '$lib/stores/featureFlags';
+
 	function toggle() {
 		showGuide.set(!$showGuide);
 	}
 </script>
 
-{#if $showGuideButton}
+{#if $showGuideFlag && $showGuideButton}
 	<div class="btn btn-primary guide-btn" on:click={toggle}>
 		{#if !$showGuide}
 			New Here?<br /> Show Guide

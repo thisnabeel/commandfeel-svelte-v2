@@ -8,6 +8,7 @@
 	import { user } from '$lib/stores/user';
 
 	import Abstractions from './Tabs/Abstractions/Abstractions.svelte';
+	import History from './Tabs/History/History.svelte';
 	import Challenges from './Tabs/Challenges/Challenges.svelte';
 	import Quizzes from './Tabs/Quiz/Quizzes.svelte';
 	import Quests from './Tabs/Quests/Quests.svelte';
@@ -16,7 +17,10 @@
 	export let element;
 	export let elementType;
 	let tabs = ['Abstractions'];
-	let admin_tabs = ['Abstractions', 'Quiz', 'Challenges', 'Quests', 'Scripts', 'Phrases'];
+	$: admin_tabs =
+		elementType === 'skills'
+			? ['Abstractions', 'History', 'Quiz', 'Challenges', 'Quests', 'Scripts', 'Phrases']
+			: ['Abstractions', 'Quiz', 'Challenges', 'Quests', 'Scripts', 'Phrases'];
 
 	let activeTab = 'Abstractions';
 
@@ -71,6 +75,12 @@
 	}
 
 	$: if (element && (!$user || !$user.admin)) {
+		const hasHistory =
+			elementType === 'skills' &&
+			(element.skill_histories || []).some((h) => (h?.body || '').replace(/<[^>]*>/g, '').trim());
+
+		tabs = hasHistory ? ['Abstractions', 'History'] : ['Abstractions'];
+
 		if (element.quiz_sets.length < 1) {
 			tabs = tabs.filter((t) => t !== 'Quiz');
 		}
@@ -126,6 +136,10 @@
 
 	{#if activeTab === 'Abstractions'}
 		<Abstractions {element} {elementType} user={$user} />
+	{/if}
+
+	{#if activeTab === 'History' && elementType === 'skills'}
+		<History {element} />
 	{/if}
 
 	{#if activeTab === 'Challenges'}

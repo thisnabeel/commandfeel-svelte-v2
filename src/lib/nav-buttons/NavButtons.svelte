@@ -47,6 +47,10 @@
 				<li class="control_panel" on:click={() => visit('/infrastructure_patterns')}>
 					Infra Patterns
 				</li>
+				<li class="control_panel" on:click={() => visit('/cohorts')}>Cohorts</li>
+				<li class="control_panel" on:click={() => visit('/occupations')}>Occupations</li>
+			{:else if $user}
+				<li on:click={() => visit('/cohorts')}>Cohorts</li>
 			{/if}
 			<li on:click={() => visit(`/`)}>Home</li>
 			<li on:click={() => visit(`/code_comparisons/arcade`)}>Arcade</li>

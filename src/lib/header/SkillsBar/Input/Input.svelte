@@ -54,7 +54,13 @@
 	};
 
 	const handleSelect = (item) => {
-		goto(`/${type}/${item.slug}.json`);
+		showResults = false;
+		query = item.title || '';
+		const path =
+			type === 'Algorithms' || type === 'Traits'
+				? `/${type.toLowerCase()}/${item.id}`
+				: `/${type.toLowerCase()}/${item.slug || item.id}`;
+		goto(path);
 	};
 
 	$: {
@@ -70,14 +76,17 @@
 		on:blur={() =>
 			setTimeout(function () {
 				showResults = false;
-			}, 50)}
+			}, 200)}
 		placeholder="Search {type}..."
 	/>
 	{#if results && showResults}
-		<!-- <h1>PRESENT!</h1> -->
-		<ul>
+		<!-- svelte-ignore a11y-click-events-have-key-events -->
+		<ul on:mousedown|preventDefault>
 			{#each results as item}
-				<li id={item.id}><a href="/{type.toLowerCase()}/{item.slug}">{item.title}</a></li>
+				<!-- svelte-ignore a11y-click-events-have-key-events -->
+				<li id={item.id} on:mousedown|preventDefault={() => handleSelect(item)}>
+					{item.title}
+				</li>
 			{/each}
 		</ul>
 	{/if}
@@ -120,6 +129,7 @@
 		padding: 10px;
 		border-bottom: 1px solid #ccc;
 		position: relative;
+		cursor: pointer;
 	}
 
 	ul li:hover {

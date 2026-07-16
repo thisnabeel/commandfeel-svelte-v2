@@ -54,7 +54,14 @@
 			</div>
 		{/if}
 		{#if $credsView}
-			<div class="creds-pop">
+			<!-- svelte-ignore a11y-click-events-have-key-events -->
+			<div
+				class="creds-backdrop"
+				role="presentation"
+				on:click={() => credsView.set(null)}
+			/>
+			<!-- svelte-ignore a11y-click-events-have-key-events -->
+			<div class="creds-pop" on:click|stopPropagation>
 				<CredsPopUp hidePopUp={() => credsView.set(null)} />
 			</div>
 		{/if}
@@ -62,6 +69,14 @@
 </aside>
 
 <style>
+	.creds-backdrop {
+		position: fixed;
+		inset: 0;
+		z-index: 9998;
+		background: transparent;
+		cursor: default;
+	}
+
 	.creds-pop {
 		position: fixed;
 		width: 240px;

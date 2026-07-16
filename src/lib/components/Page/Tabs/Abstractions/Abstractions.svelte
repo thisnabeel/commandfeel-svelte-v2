@@ -7,6 +7,7 @@
 	interface Abstraction {
 		id: number;
 		body: string;
+		level?: number;
 	}
 
 	export let element: Element;
@@ -14,12 +15,39 @@
 	import { user } from '$lib/stores/user';
 	import { goto } from '$app/navigation';
 	import Abstraction from './Abstraction.svelte';
+	import AbstractionLevelPicker from '$lib/components/AbstractionLevelPicker.svelte';
 	import { modals } from 'svelte-modals';
 	import QuestTitleModal from './QuestTitleModal.svelte';
 
 	import Api from '$lib/api/api';
 	import Swal from 'sweetalert2';
 	import API from '$lib/api/api';
+	import {
+		abstractableTypeFromElementType,
+		defaultSelectedLevel,
+		showLevelPicker,
+		visibleLevels
+	} from '$lib/abstractionLevels.js';
+
+	let selectedLevel = 0;
+	let levelInitialized = false;
+
+	$: isAdmin = !!($user && $user.admin);
+	$: pickerVisible = showLevelPicker(element?.abstractions || [], isAdmin);
+	$: levels = visibleLevels(element?.abstractions || [], isAdmin);
+	$: filteredAbstractions = (element?.abstractions || []).filter(
+		(a) => (a.level ?? 0) === selectedLevel
+	);
+
+	$: if (element?.abstractions && !levelInitialized) {
+		selectedLevel = defaultSelectedLevel(element.abstractions, isAdmin);
+		levelInitialized = true;
+	}
+
+	$: if (levelInitialized && levels.length && !levels.includes(selectedLevel)) {
+		selectedLevel = levels[0];
+	}
+
 	async function handleRemoveAbstraction(payload: { id: number }) {
 		console.log({ payload });
 		await Api.delete('/abstractions/' + payload.id + '.json');
@@ -29,17 +57,17 @@
 	const addAbstraction = async () => {
 		const response = await Api.post('/abstractions.json', {
 			abstractable_id: element.id,
-			abstractable_type: 'Element'
+			abstractable_type: abstractableTypeFromElementType(elementType),
+			level: selectedLevel
 		});
 		console.log(response);
 		element.abstractions = [...element.abstractions, response];
-		// console.log('fetch element', element);
-		// fetchElement(element.id);
 	};
 
 	const generateAbstraction = async () => {
 		const response = await Api.post(`/${elementType}/generate_abstraction`, {
-			id: element.id
+			id: element.id,
+			level: selectedLevel
 		});
 
 		element.abstractions = [...element.abstractions, response];
@@ -104,6 +132,13 @@
 </script>
 
 <ul class="abstractions">
+	{#if pickerVisible}
+		<AbstractionLevelPicker
+			{levels}
+			selected={selectedLevel}
+			onSelect={(level) => (selectedLevel = level)}
+		/>
+	{/if}
 	{#if $user && $user.admin}
 		<div class="adder">
 			<div class="add-abstraction" on:click={addAbstraction}>+</div>
@@ -112,8 +147,8 @@
 			</div>
 		</div>
 	{/if}
-	{#if element.abstractions.length > 0}
-		{#each element.abstractions as abstraction}
+	{#if filteredAbstractions.length > 0}
+		{#each filteredAbstractions as abstraction}
 			<li>
 				<Abstraction
 					{element}
