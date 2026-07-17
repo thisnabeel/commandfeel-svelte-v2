@@ -16,6 +16,10 @@
 	let adminComments = {};
 	/** @type {number|string|null} */
 	let approvingId = null;
+	/** @type {number|string|null} */
+	let deletingId = null;
+	/** @type {any|null} */
+	let confirmDeleteEv = null;
 
 	$: isAdmin = !!$user?.admin;
 	$: hasApproved = items.some((e) => e.approved);
@@ -122,6 +126,40 @@
 				'Could not update.';
 		} finally {
 			approvingId = null;
+		}
+	}
+
+	function canDelete(ev) {
+		if (!ev || !$user) return false;
+		if (isAdmin) return true;
+		return String(ev.user_id) === String($user.id);
+	}
+
+	function requestDeleteEvidence(ev) {
+		if (!canDelete(ev) || deletingId) return;
+		confirmDeleteEv = ev;
+	}
+
+	function cancelDeleteEvidence() {
+		if (deletingId) return;
+		confirmDeleteEv = null;
+	}
+
+	async function confirmDeleteEvidence() {
+		const ev = confirmDeleteEv;
+		if (!canDelete(ev) || !ev?.id || deletingId) return;
+		try {
+			deletingId = ev.id;
+			error = '';
+			await Api.delete(`/occupation_skill_evidences/${ev.id}`);
+			items = items.filter((e) => e.id !== ev.id);
+			confirmDeleteEv = null;
+			onStatusChange(items.some((e) => e.approved));
+		} catch (err) {
+			error =
+				err?.response?.data?.error || err?.message || 'Could not delete evidence.';
+		} finally {
+			deletingId = null;
 		}
 	}
 
@@ -248,10 +286,65 @@
 								</div>
 							{/if}
 						{/if}
+						{#if canDelete(ev)}
+							<button
+								type="button"
+								class="ghost danger"
+								disabled={deletingId === ev.id}
+								on:click={() => requestDeleteEvidence(ev)}
+							>
+								Delete
+							</button>
+						{/if}
 					</li>
 				{/each}
 			</ul>
 		{/if}
+	{/if}
+
+	{#if confirmDeleteEv}
+		<div
+			class="confirm-backdrop"
+			role="presentation"
+			on:click={cancelDeleteEvidence}
+			on:keydown={(e) => e.key === 'Escape' && cancelDeleteEvidence()}
+		>
+			<div
+				class="confirm-dialog"
+				role="alertdialog"
+				aria-modal="true"
+				aria-labelledby="delete-ev-panel-title"
+				aria-describedby="delete-ev-panel-desc"
+				on:click|stopPropagation
+			>
+				<h3 id="delete-ev-panel-title">Delete evidence?</h3>
+				<p id="delete-ev-panel-desc">
+					This removes this evidence
+					{#if confirmDeleteEv.approved}
+						(including its approval)
+					{/if}
+					. This cannot be undone.
+				</p>
+				<div class="confirm-actions">
+					<button
+						type="button"
+						class="confirm-cancel"
+						disabled={!!deletingId}
+						on:click={cancelDeleteEvidence}
+					>
+						Cancel
+					</button>
+					<button
+						type="button"
+						class="confirm-delete"
+						disabled={!!deletingId}
+						on:click={confirmDeleteEvidence}
+					>
+						{deletingId === confirmDeleteEv.id ? 'Deleting…' : 'Delete'}
+					</button>
+				</div>
+			</div>
+		</div>
 	{/if}
 </div>
 
@@ -411,6 +504,79 @@
 		font-weight: 600;
 		font-size: 0.8rem;
 		cursor: pointer;
+	}
+
+	.ghost.danger {
+		border-color: rgba(176, 42, 55, 0.35);
+		color: #b02a37;
+	}
+
+	.confirm-backdrop {
+		position: fixed;
+		inset: 0;
+		z-index: 80;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		padding: 1.25rem;
+		background: rgba(7, 20, 22, 0.45);
+	}
+
+	.confirm-dialog {
+		width: min(22rem, 100%);
+		background: #fff;
+		border-radius: 14px;
+		padding: 1.25rem 1.2rem 1.1rem;
+		box-shadow: 0 18px 40px rgba(7, 65, 68, 0.22);
+		border: 1px solid rgba(7, 65, 68, 0.12);
+	}
+
+	.confirm-dialog h3 {
+		margin: 0 0 0.4rem;
+		font-family: 'Space Grotesk', sans-serif;
+		font-size: 1.1rem;
+		font-weight: 700;
+		color: #071416;
+	}
+
+	.confirm-dialog p {
+		margin: 0 0 1.1rem;
+		font-size: 0.9rem;
+		line-height: 1.45;
+		color: #3a545c;
+	}
+
+	.confirm-actions {
+		display: flex;
+		justify-content: flex-end;
+		gap: 0.5rem;
+	}
+
+	.confirm-cancel,
+	.confirm-delete {
+		border-radius: 8px;
+		padding: 0.45rem 0.9rem;
+		font-weight: 700;
+		font-size: 0.85rem;
+		cursor: pointer;
+	}
+
+	.confirm-cancel {
+		border: 1px solid rgba(7, 65, 68, 0.18);
+		background: #fff;
+		color: #3a545c;
+	}
+
+	.confirm-delete {
+		border: none;
+		background: #b02a37;
+		color: #fff;
+	}
+
+	.confirm-cancel:disabled,
+	.confirm-delete:disabled {
+		opacity: 0.6;
+		cursor: wait;
 	}
 
 	.status {

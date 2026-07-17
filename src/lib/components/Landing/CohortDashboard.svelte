@@ -489,6 +489,18 @@
 									cohortTitle={primary.cohort_title || ''}
 									cohortSubtitle={primary.cohort_subtitle || ''}
 									cohortDescription={primary.cohort_description || ''}
+									onEvidenceDeleted={(_id, _skillId) => {
+										if (!primary?.occupation_id) return;
+										Api.get(
+											`/occupations/${primary.occupation_id}/my_approved_evidences`
+										)
+											.then((evIds) => {
+												approvedEvidenceIds = new Set(
+													Array.isArray(evIds) ? evIds : []
+												);
+											})
+											.catch(() => {});
+									}}
 								/>
 							{:else}
 								<p class="panel-empty">

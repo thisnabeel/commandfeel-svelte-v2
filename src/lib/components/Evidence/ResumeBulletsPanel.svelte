@@ -12,6 +12,8 @@
 	export let cohortTitle = '';
 	export let cohortSubtitle = '';
 	export let cohortDescription = '';
+	/** Fired when an evidence card is removed (id, stillHasApprovedForSkill) */
+	export let onEvidenceDeleted = (_id, _occupationSkillId) => {};
 
 	let items = [];
 	let loading = true;
@@ -32,6 +34,10 @@
 	let deletingBulletId = null;
 	/** @type {number|string|null} */
 	let copiedBulletId = null;
+	/** @type {number|string|null} */
+	let deletingEvidenceId = null;
+	/** @type {any|null} */
+	let confirmDeleteEv = null;
 
 	function bulletsOf(ev) {
 		return Array.isArray(ev?.evidence_bullets) ? ev.evidence_bullets : [];
@@ -165,6 +171,41 @@
 		}
 	}
 
+	function requestDeleteEvidence(ev) {
+		if (!ev?.id || deletingEvidenceId) return;
+		confirmDeleteEv = ev;
+	}
+
+	function cancelDeleteEvidence() {
+		if (deletingEvidenceId) return;
+		confirmDeleteEv = null;
+	}
+
+	async function confirmDeleteEvidence() {
+		const ev = confirmDeleteEv;
+		if (!ev?.id || deletingEvidenceId) return;
+		try {
+			deletingEvidenceId = ev.id;
+			genErrors = { ...genErrors, [ev.id]: '' };
+			await Api.delete(`/occupation_skill_evidences/${ev.id}`);
+			const skillId = ev.occupation_skill_id;
+			items = items.filter((e) => e.id !== ev.id);
+			const next = new Set(openIds);
+			next.delete(ev.id);
+			openIds = next;
+			confirmDeleteEv = null;
+			onEvidenceDeleted(ev.id, skillId);
+		} catch (err) {
+			genErrors = {
+				...genErrors,
+				[ev.id]:
+					err?.response?.data?.error || err?.message || 'Could not delete evidence.'
+			};
+		} finally {
+			deletingEvidenceId = null;
+		}
+	}
+
 	async function deleteBullet(ev, bullet) {
 		if (!bullet?.id || deletingBulletId) return;
 		try {
@@ -215,20 +256,32 @@
 			{#each items as ev (ev.id)}
 				{@const list = bulletsOf(ev)}
 				<li class="item" class:open={isOpen(ev.id)}>
-					<button
-						type="button"
-						class="toggle"
-						aria-expanded={isOpen(ev.id)}
-						on:click={() => toggle(ev.id)}
-					>
-						<span class="chev" aria-hidden="true">{isOpen(ev.id) ? '▾' : '▸'}</span>
-						<span class="titles">
-							<span class="skill">{ev.skill_label || 'Skill'}</span>
-							{#if ev.breadcrumb && ev.breadcrumb !== ev.skill_label}
-								<span class="crumb">{ev.breadcrumb}</span>
-							{/if}
-						</span>
-					</button>
+					<div class="item-head">
+						<button
+							type="button"
+							class="toggle"
+							aria-expanded={isOpen(ev.id)}
+							on:click={() => toggle(ev.id)}
+						>
+							<span class="chev" aria-hidden="true">{isOpen(ev.id) ? '▾' : '▸'}</span>
+							<span class="titles">
+								<span class="skill">{ev.skill_label || 'Skill'}</span>
+								{#if ev.breadcrumb && ev.breadcrumb !== ev.skill_label}
+									<span class="crumb">{ev.breadcrumb}</span>
+								{/if}
+							</span>
+						</button>
+						<button
+							type="button"
+							class="icon-btn danger delete-ev"
+							title="Delete evidence"
+							aria-label="Delete evidence"
+							disabled={deletingEvidenceId === ev.id}
+							on:click={() => requestDeleteEvidence(ev)}
+						>
+							<i class="fa fa-trash" aria-hidden="true" />
+						</button>
+					</div>
 
 					<div class="card-body">
 						<p class="evidence-body">{ev.body}</p>
@@ -321,12 +374,59 @@
 							Generating…
 						{:else}
 							<span class="wiz-icon" aria-hidden="true">✦</span>
-							Wizard
+							Generate Bulletpoint
 						{/if}
 					</button>
 				</li>
 			{/each}
 		</ul>
+	{/if}
+
+	{#if confirmDeleteEv}
+		<div
+			class="confirm-backdrop"
+			role="presentation"
+			on:click={cancelDeleteEvidence}
+			on:keydown={(e) => e.key === 'Escape' && cancelDeleteEvidence()}
+		>
+			<div
+				class="confirm-dialog"
+				role="alertdialog"
+				aria-modal="true"
+				aria-labelledby="delete-ev-title"
+				aria-describedby="delete-ev-desc"
+				on:click|stopPropagation
+			>
+				<h3 id="delete-ev-title">Delete evidence?</h3>
+				<p id="delete-ev-desc">
+					This removes “{confirmDeleteEv.skill_label || 'this skill'}” evidence
+					{#if bulletsOf(confirmDeleteEv).length}
+						and {bulletsOf(confirmDeleteEv).length} resume bullet{bulletsOf(confirmDeleteEv)
+							.length === 1
+							? ''
+							: 's'}
+					{/if}. This cannot be undone.
+				</p>
+				<div class="confirm-actions">
+					<button
+						type="button"
+						class="confirm-cancel"
+						disabled={!!deletingEvidenceId}
+						on:click={cancelDeleteEvidence}
+					>
+						Cancel
+					</button>
+					<button
+						type="button"
+						class="confirm-delete"
+						disabled={!!deletingEvidenceId}
+						on:click={confirmDeleteEvidence}
+					>
+						{deletingEvidenceId === confirmDeleteEv.id ? 'Deleting…' : 'Delete'}
+					</button>
+				</div>
+			</div>
+		</div>
 	{/if}
 </div>
 
@@ -357,18 +457,29 @@
 		border-color: rgba(10, 95, 99, 0.28);
 	}
 
+	.item-head {
+		display: flex;
+		align-items: flex-start;
+		gap: 0.25rem;
+	}
+
 	.toggle {
 		display: flex;
 		align-items: flex-start;
 		gap: 0.55rem;
 		border: none;
 		background: transparent;
-		padding: 0.85rem 0.95rem 0.45rem;
+		padding: 0.85rem 0.5rem 0.45rem 0.95rem;
 		text-align: left;
 		cursor: pointer;
 		font: inherit;
 		color: inherit;
-		width: 100%;
+		flex: 1;
+		min-width: 0;
+	}
+
+	.delete-ev {
+		margin: 0.7rem 0.75rem 0 0;
 	}
 
 	.toggle:hover {
@@ -592,6 +703,75 @@
 
 	.status.err {
 		color: #b02a37;
+	}
+
+	.confirm-backdrop {
+		position: fixed;
+		inset: 0;
+		z-index: 80;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		padding: 1.25rem;
+		background: rgba(7, 20, 22, 0.45);
+	}
+
+	.confirm-dialog {
+		width: min(22rem, 100%);
+		background: #fff;
+		border-radius: 14px;
+		padding: 1.25rem 1.2rem 1.1rem;
+		box-shadow: 0 18px 40px rgba(7, 65, 68, 0.22);
+		border: 1px solid rgba(7, 65, 68, 0.12);
+	}
+
+	.confirm-dialog h3 {
+		margin: 0 0 0.4rem;
+		font-family: 'Space Grotesk', sans-serif;
+		font-size: 1.15rem;
+		font-weight: 700;
+		letter-spacing: -0.02em;
+		color: #071416;
+	}
+
+	.confirm-dialog p {
+		margin: 0 0 1.1rem;
+		font-size: 0.92rem;
+		line-height: 1.45;
+		color: #3a545c;
+	}
+
+	.confirm-actions {
+		display: flex;
+		justify-content: flex-end;
+		gap: 0.5rem;
+	}
+
+	.confirm-cancel,
+	.confirm-delete {
+		border-radius: 8px;
+		padding: 0.45rem 0.9rem;
+		font-weight: 700;
+		font-size: 0.85rem;
+		cursor: pointer;
+	}
+
+	.confirm-cancel {
+		border: 1px solid rgba(7, 65, 68, 0.18);
+		background: #fff;
+		color: #3a545c;
+	}
+
+	.confirm-delete {
+		border: none;
+		background: #b02a37;
+		color: #fff;
+	}
+
+	.confirm-cancel:disabled,
+	.confirm-delete:disabled {
+		opacity: 0.6;
+		cursor: wait;
 	}
 
 	@media (max-width: 640px) {
