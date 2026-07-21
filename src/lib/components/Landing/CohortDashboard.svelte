@@ -5,6 +5,7 @@
 	import QuestionsPanel from '$lib/components/Questions/QuestionsPanel.svelte';
 	import PendingEvidencesPanel from '$lib/components/Evidence/PendingEvidencesPanel.svelte';
 	import ResumeBulletsPanel from '$lib/components/Evidence/ResumeBulletsPanel.svelte';
+	import InterestingJobsPanel from '$lib/components/Jobs/InterestingJobsPanel.svelte';
 	import JoinOpenSeats from '$lib/components/Landing/JoinOpenSeats.svelte';
 	import { countBadgeWorthy } from '$lib/questions/badgeCounts.js';
 
@@ -28,14 +29,25 @@
 	let questionsLoadedFor = null;
 	let pendingEvidenceCount = 0;
 	let pendingEvidenceLoadedFor = null;
+	/** @type {any[]} */
+	let cohortMembers = [];
+	/** @type {number|string|null} */
+	let cohortMembersLoadedFor = null;
+	let cohortMembersLoading = false;
+	/** Admin teacher view: selected learner seat (null = own/admin dashboard) */
+	/** @type {any|null} */
+	let viewingAsSeat = null;
 
 	const panelTabs = [
 		{ id: 'vocabulary', label: 'Vocabulary' },
 		{ id: 'questions', label: 'My Questions' },
-		{ id: 'resume', label: 'Resume Bullets' }
+		{ id: 'resume', label: 'Resume Bullets' },
+		{ id: 'jobs', label: 'Interesting Jobs' }
 	];
 
-	$: isAdminView = !!(adminPreview || $user?.admin);
+	$: isAdmin = !!(adminPreview || $user?.admin);
+	$: isTeacherViewing = !!(isAdmin && viewingAsSeat);
+	$: isAdminView = isAdmin && !isTeacherViewing;
 	$: panelTabsResolved = [
 		...panelTabs.map((tab) =>
 			tab.id === 'questions' && isAdminView
@@ -91,7 +103,7 @@
 	}
 
 	async function loadPendingEvidenceCount(cohortId) {
-		if (!$user?.admin || !cohortId || !isAdminView) {
+		if (!$user?.admin || !cohortId || !isAdmin) {
 			pendingEvidenceCount = 0;
 			pendingEvidenceLoadedFor = null;
 			return;
@@ -106,6 +118,80 @@
 		} catch {
 			/* keep prior */
 		}
+	}
+
+	async function loadCohortMembers(cohortId) {
+		if (!$user?.admin || !cohortId || !isAdmin) {
+			cohortMembers = [];
+			cohortMembersLoadedFor = null;
+			cohortMembersLoading = false;
+			return;
+		}
+		if (cohortMembersLoadedFor === cohortId) return;
+		try {
+			cohortMembersLoading = true;
+			const list = await Api.get(`/cohort_users?cohort_id=${cohortId}`);
+			const seats = Array.isArray(list) ? list : [];
+			cohortMembers = seats
+				.filter(
+					(s) =>
+						s.user_id &&
+						String(s.user_id) !== String($user?.id) &&
+						(s.status === 'assigned' || s.status === 'applied')
+				)
+				.sort((a, b) => {
+					const ao = a.status === 'assigned' ? 0 : 1;
+					const bo = b.status === 'assigned' ? 0 : 1;
+					if (ao !== bo) return ao - bo;
+					return String(memberLabel(a)).localeCompare(String(memberLabel(b)));
+				});
+			cohortMembersLoadedFor = cohortId;
+		} catch {
+			cohortMembers = [];
+			cohortMembersLoadedFor = null;
+		} finally {
+			cohortMembersLoading = false;
+		}
+	}
+
+	function memberLabel(seat) {
+		const username = (seat?.user_username || '').trim();
+		if (username) return username;
+		const email = (seat?.user_email || '').trim();
+		if (email) return email.split('@')[0] || email;
+		return 'Member';
+	}
+
+	function clearViewCaches() {
+		vocabLoadedFor = null;
+		questionsLoadedFor = null;
+		occupation = null;
+		tree = [];
+		notedIds = new Set();
+		approvedEvidenceIds = new Set();
+		unresolvedBySkillId = {};
+		unresolvedQuestionCount = 0;
+	}
+
+	function viewAsMember(seat) {
+		if (!isAdmin || !seat?.id) return;
+		if (viewingAsSeat && String(viewingAsSeat.id) === String(seat.id)) {
+			exitViewAs();
+			return;
+		}
+		viewingAsSeat = seat;
+		clearViewCaches();
+		if (panelTab === 'pending_evidence') panelTab = 'vocabulary';
+		if (seat.occupation_id) loadVocabulary(seat.occupation_id);
+		loadUnresolvedCount(seat);
+	}
+
+	function exitViewAs() {
+		viewingAsSeat = null;
+		clearViewCaches();
+		const seat = memberships[0];
+		if (seat?.occupation_id) loadVocabulary(seat.occupation_id);
+		if (seat) loadUnresolvedCount(seat);
 	}
 
 	function firstName(u) {
@@ -228,7 +314,9 @@
 
 	async function loadVocabulary(occupationId) {
 		if (!occupationId) return;
-		if (vocabLoadedFor === occupationId && occupation) return;
+		const subjectKey = viewingAsSeat?.user_id ? String(viewingAsSeat.user_id) : 'self';
+		const cacheKey = `${occupationId}:${subjectKey}`;
+		if (vocabLoadedFor === cacheKey && occupation) return;
 		try {
 			vocabLoading = true;
 			vocabError = '';
@@ -236,14 +324,18 @@
 			occupation = occ;
 			tree = buildTree(occ.occupation_skills || []);
 			if ($user) {
+				const userQ =
+					viewingAsSeat?.user_id != null ? `?user_id=${viewingAsSeat.user_id}` : '';
 				try {
-					const ids = await Api.get(`/occupations/${occupationId}/my_notes`);
+					const ids = await Api.get(`/occupations/${occupationId}/my_notes${userQ}`);
 					notedIds = new Set(Array.isArray(ids) ? ids : []);
 				} catch {
 					notedIds = new Set();
 				}
 				try {
-					const evIds = await Api.get(`/occupations/${occupationId}/my_approved_evidences`);
+					const evIds = await Api.get(
+						`/occupations/${occupationId}/my_approved_evidences${userQ}`
+					);
 					approvedEvidenceIds = new Set(Array.isArray(evIds) ? evIds : []);
 				} catch {
 					approvedEvidenceIds = new Set();
@@ -254,7 +346,7 @@
 				approvedEvidenceIds = new Set();
 				unresolvedBySkillId = {};
 			}
-			vocabLoadedFor = occupationId;
+			vocabLoadedFor = cacheKey;
 		} catch (err) {
 			vocabError = err?.response?.data?.error || err?.message || 'Failed to load vocabulary';
 			occupation = null;
@@ -271,7 +363,7 @@
 		}
 	}
 
-	$: primary = memberships[0];
+	$: primary = viewingAsSeat || memberships[0];
 	$: greetingName = firstName($user);
 	$: dateDisplay = primary
 		? formatDateRange(primary.cohort_start_date, primary.cohort_end_date)
@@ -292,10 +384,17 @@
 	} else {
 		unresolvedQuestionCount = 0;
 	}
-	$: if (isAdminView && primary?.cohort_id) {
+	$: if (isAdmin && primary?.cohort_id) {
 		loadPendingEvidenceCount(primary.cohort_id);
-	} else {
+		loadCohortMembers(primary.cohort_id);
+	} else if (!isAdmin) {
 		pendingEvidenceCount = 0;
+		cohortMembers = [];
+		cohortMembersLoadedFor = null;
+	}
+
+	$: if (!isAdmin && viewingAsSeat) {
+		viewingAsSeat = null;
 	}
 </script>
 
@@ -331,7 +430,9 @@
 				<div class="seat-top">
 					<div class="seat-copy">
 						<p class="seat-kicker">
-							{#if adminPreview}
+							{#if isTeacherViewing}
+								Viewing as {memberLabel(viewingAsSeat)}
+							{:else if adminPreview}
 								Admin view of
 							{:else if primary.status === 'assigned'}
 								You're enrolled in
@@ -352,8 +453,8 @@
 					{/if}
 				</div>
 
-				{#if dateDisplay?.kind !== 'empty' || primary.status === 'applied'}
-					<div class="seat-foot">
+				{#if dateDisplay?.kind !== 'empty' || primary.status === 'applied' || (isAdmin && (cohortMembers.length > 0 || cohortMembersLoading))}
+					<div class="seat-foot" class:seat-foot-admin={isAdmin}>
 						{#if dateDisplay && dateDisplay.kind !== 'empty'}
 							<div class="stat dates-stat">
 								<span class="stat-label">Dates</span>
@@ -365,10 +466,52 @@
 								{/if}
 							</div>
 						{/if}
-						{#if primary.status === 'applied'}
+						{#if primary.status === 'applied' && !isTeacherViewing}
 							<div class="stat">
 								<span class="stat-label">Status</span>
 								<span class="status status-applied">Pending</span>
+							</div>
+						{/if}
+						{#if isAdmin}
+							<div class="members-block">
+								<div class="members-head">
+									<span class="stat-label">Members</span>
+									{#if isTeacherViewing}
+										<button type="button" class="exit-view" on:click={exitViewAs}>
+											Exit student view
+										</button>
+									{/if}
+								</div>
+								{#if cohortMembersLoading && !cohortMembers.length}
+									<p class="members-empty">Loading…</p>
+								{:else if !cohortMembers.length}
+									<p class="members-empty">No enrolled members yet</p>
+								{:else}
+									<div class="members-scroll" role="list" aria-label="Cohort members">
+										{#each cohortMembers as seat (seat.id)}
+											<button
+												type="button"
+												class="member-chip"
+												role="listitem"
+												class:pending={seat.status === 'applied'}
+												class:selected={viewingAsSeat &&
+													String(viewingAsSeat.id) === String(seat.id)}
+												aria-pressed={viewingAsSeat &&
+													String(viewingAsSeat.id) === String(seat.id)}
+												title="View cohort as {memberLabel(seat)}"
+												on:click={() => viewAsMember(seat)}
+											>
+												<span class="member-name">{memberLabel(seat)}</span>
+												{#if seat.occupation_title}
+													<span class="member-role">{seat.occupation_title}</span>
+												{/if}
+												{#if seat.status === 'applied'}
+													<span class="member-status">Pending</span>
+												{/if}
+											</button>
+										{/each}
+									</div>
+								{/if}
 							</div>
 						{/if}
 					</div>
@@ -465,7 +608,10 @@
 									questionableType="CohortUser"
 									questionableId={primary.id}
 									cohortUserId={primary.id}
-									emptyLabel="You haven't asked any questions yet."
+									allowAsk={!isTeacherViewing}
+									emptyLabel={isTeacherViewing
+										? 'This student has not asked any questions yet.'
+										: "You haven't asked any questions yet."}
 									onChange={onQuestionsChange}
 								/>
 							{:else}
@@ -485,12 +631,14 @@
 								<ResumeBulletsPanel
 									occupationId={primary.occupation_id}
 									cohortId={primary.cohort_id || null}
+									userId={isTeacherViewing ? primary.user_id : null}
+									readOnly={isTeacherViewing}
 									occupationTitle={primary.occupation_title || ''}
 									cohortTitle={primary.cohort_title || ''}
 									cohortSubtitle={primary.cohort_subtitle || ''}
 									cohortDescription={primary.cohort_description || ''}
 									onEvidenceDeleted={(_id, _skillId) => {
-										if (!primary?.occupation_id) return;
+										if (!primary?.occupation_id || isTeacherViewing) return;
 										Api.get(
 											`/occupations/${primary.occupation_id}/my_approved_evidences`
 										)
@@ -507,6 +655,15 @@
 									Assign an occupation to your seat to generate resume bullets from approved
 									evidence.
 								</p>
+							{/if}
+						{:else if panelTab === 'jobs'}
+							{#if primary?.id}
+								<InterestingJobsPanel
+									cohortUserId={primary.id}
+									readOnly={isTeacherViewing}
+								/>
+							{:else}
+								<p class="panel-empty">No cohort seat selected.</p>
 							{/if}
 						{/if}
 					</div>
@@ -805,11 +962,21 @@
 		border-top: 1px solid rgba(7, 65, 68, 0.08);
 	}
 
+	.seat-foot-admin {
+		flex-wrap: nowrap;
+		align-items: flex-start;
+		gap: 1.25rem 1.5rem;
+	}
+
 	.stat {
 		display: flex;
 		flex-direction: column;
 		gap: 0.35rem;
 		min-width: 0;
+	}
+
+	.dates-stat {
+		flex-shrink: 0;
 	}
 
 	.stat-label {
@@ -842,6 +1009,121 @@
 		letter-spacing: -0.02em;
 		line-height: 1;
 		color: var(--accent-deep);
+	}
+
+	.members-block {
+		flex: 1;
+		min-width: 0;
+		display: flex;
+		flex-direction: column;
+		gap: 0.45rem;
+	}
+
+	.members-head {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		gap: 0.75rem;
+	}
+
+	.exit-view {
+		border: none;
+		background: transparent;
+		padding: 0;
+		font: inherit;
+		font-size: 0.75rem;
+		font-weight: 700;
+		color: var(--accent-deep);
+		cursor: pointer;
+		text-decoration: underline;
+		text-underline-offset: 2px;
+	}
+
+	.members-empty {
+		margin: 0;
+		font-size: 0.88rem;
+		color: #5a7178;
+	}
+
+	.members-scroll {
+		display: flex;
+		flex-wrap: nowrap;
+		gap: 0.55rem;
+		overflow-x: auto;
+		overflow-y: hidden;
+		padding-bottom: 0.2rem;
+		-webkit-overflow-scrolling: touch;
+		scrollbar-width: thin;
+	}
+
+	.member-chip {
+		flex: 0 0 auto;
+		display: flex;
+		flex-direction: column;
+		align-items: flex-start;
+		gap: 0.12rem;
+		min-width: 7.5rem;
+		max-width: 11rem;
+		padding: 0.55rem 0.7rem;
+		border-radius: 10px;
+		border: 1px solid rgba(7, 65, 68, 0.14);
+		background: rgba(255, 255, 255, 0.72);
+		font: inherit;
+		text-align: left;
+		cursor: pointer;
+		color: inherit;
+	}
+
+	.member-chip:hover {
+		border-color: rgba(10, 95, 99, 0.35);
+		background: #fff;
+	}
+
+	.member-chip.selected {
+		border-color: #0a5f63;
+		background: #fff;
+		box-shadow: 0 0 0 2px rgba(10, 95, 99, 0.18);
+	}
+
+	.member-chip.pending {
+		border-style: dashed;
+		opacity: 0.92;
+	}
+
+	.member-name {
+		font-family: GreyCliffCF-Bold, system-ui, sans-serif;
+		font-size: 0.88rem;
+		font-weight: 700;
+		color: var(--ink);
+		white-space: nowrap;
+		overflow: hidden;
+		text-overflow: ellipsis;
+	}
+
+	.member-role {
+		font-size: 0.72rem;
+		color: #5a7178;
+		white-space: nowrap;
+		overflow: hidden;
+		text-overflow: ellipsis;
+	}
+
+	.member-status {
+		font-size: 0.65rem;
+		font-weight: 700;
+		letter-spacing: 0.06em;
+		text-transform: uppercase;
+		color: #a16207;
+	}
+
+	@media (max-width: 640px) {
+		.seat-foot-admin {
+			flex-wrap: wrap;
+		}
+
+		.members-block {
+			flex: 1 1 100%;
+		}
 	}
 
 	.sprint-band {

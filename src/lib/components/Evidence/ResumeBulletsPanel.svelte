@@ -7,6 +7,11 @@
 	export let occupationId = null;
 	/** @type {number|string|null} */
 	export let cohortId = null;
+	/** Admin teacher view: load another learner's approved evidence */
+	/** @type {number|string|null} */
+	export let userId = null;
+	/** When true, hide generate/edit/delete actions */
+	export let readOnly = false;
 	/** Fallbacks from cohort seat when evidence lacks cohort/occupation fields */
 	export let occupationTitle = '';
 	export let cohortTitle = '';
@@ -54,6 +59,7 @@
 			error = '';
 			const params = new URLSearchParams({ occupation_id: String(occupationId) });
 			if (cohortId) params.set('cohort_id', String(cohortId));
+			if (userId) params.set('user_id', String(userId));
 			const list = await Api.get(`/occupation_skill_evidences/mine_approved?${params}`);
 			items = Array.isArray(list) ? list : [];
 		} catch (err) {
@@ -231,7 +237,7 @@
 
 	let lastKey = undefined;
 	$: {
-		const key = `${$user?.id ?? 'anon'}:${occupationId || ''}:${cohortId || ''}`;
+		const key = `${$user?.id ?? 'anon'}:${occupationId || ''}:${cohortId || ''}:${userId || ''}`;
 		if (key !== lastKey) {
 			lastKey = key;
 			load();
@@ -271,16 +277,18 @@
 								{/if}
 							</span>
 						</button>
-						<button
-							type="button"
-							class="icon-btn danger delete-ev"
-							title="Delete evidence"
-							aria-label="Delete evidence"
-							disabled={deletingEvidenceId === ev.id}
-							on:click={() => requestDeleteEvidence(ev)}
-						>
-							<i class="fa fa-trash" aria-hidden="true" />
-						</button>
+						{#if !readOnly}
+							<button
+								type="button"
+								class="icon-btn danger delete-ev"
+								title="Delete evidence"
+								aria-label="Delete evidence"
+								disabled={deletingEvidenceId === ev.id}
+								on:click={() => requestDeleteEvidence(ev)}
+							>
+								<i class="fa fa-trash" aria-hidden="true" />
+							</button>
+						{/if}
 					</div>
 
 					<div class="card-body">
@@ -331,25 +339,27 @@
 														aria-hidden="true"
 													/>
 												</button>
-												<button
-													type="button"
-													class="icon-btn"
-													title="Edit bullet"
-													aria-label="Edit bullet"
-													on:click={() => startEdit(bullet)}
-												>
-													<i class="fa fa-pencil" aria-hidden="true" />
-												</button>
-												<button
-													type="button"
-													class="icon-btn danger"
-													title="Delete bullet"
-													aria-label="Delete bullet"
-													disabled={deletingBulletId === bullet.id}
-													on:click={() => deleteBullet(ev, bullet)}
-												>
-													<i class="fa fa-trash" aria-hidden="true" />
-												</button>
+												{#if !readOnly}
+													<button
+														type="button"
+														class="icon-btn"
+														title="Edit bullet"
+														aria-label="Edit bullet"
+														on:click={() => startEdit(bullet)}
+													>
+														<i class="fa fa-pencil" aria-hidden="true" />
+													</button>
+													<button
+														type="button"
+														class="icon-btn danger"
+														title="Delete bullet"
+														aria-label="Delete bullet"
+														disabled={deletingBulletId === bullet.id}
+														on:click={() => deleteBullet(ev, bullet)}
+													>
+														<i class="fa fa-trash" aria-hidden="true" />
+													</button>
+												{/if}
 											</div>
 										{/if}
 									</li>
@@ -362,21 +372,23 @@
 						{/if}
 					</div>
 
-					<button
-						type="button"
-						class="wizard"
-						disabled={generatingId === ev.id}
-						title="Generate resume bullet"
-						aria-label="Generate resume bullet for {ev.skill_label || 'skill'}"
-						on:click={() => generateBullet(ev)}
-					>
-						{#if generatingId === ev.id}
-							Generating…
-						{:else}
-							<span class="wiz-icon" aria-hidden="true">✦</span>
-							Generate Bulletpoint
-						{/if}
-					</button>
+					{#if !readOnly}
+						<button
+							type="button"
+							class="wizard"
+							disabled={generatingId === ev.id}
+							title="Generate resume bullet"
+							aria-label="Generate resume bullet for {ev.skill_label || 'skill'}"
+							on:click={() => generateBullet(ev)}
+						>
+							{#if generatingId === ev.id}
+								Generating…
+							{:else}
+								<span class="wiz-icon" aria-hidden="true">✦</span>
+								Generate Bulletpoint
+							{/if}
+						</button>
+					{/if}
 				</li>
 			{/each}
 		</ul>
