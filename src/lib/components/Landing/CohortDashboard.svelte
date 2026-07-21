@@ -55,6 +55,9 @@
 	$: isAdmin = !!(adminPreview || $user?.admin);
 	$: isTeacherViewing = !!(isAdmin && viewingAsSeat);
 	$: isAdminView = isAdmin && !isTeacherViewing;
+	$: showMembers =
+		!!primary?.cohort_id &&
+		(isAdmin || primary?.status === 'assigned' || primary?.status === 'applied');
 	$: panelTabsResolved = [
 		...panelTabs.map((tab) =>
 			tab.id === 'questions' && isAdminView
@@ -128,7 +131,7 @@
 	}
 
 	async function loadCohortMembers(cohortId) {
-		if (!$user?.admin || !cohortId || !isAdmin) {
+		if (!$user || !cohortId || !showMembers) {
 			cohortMembers = [];
 			cohortMembersLoadedFor = null;
 			cohortMembersLoading = false;
@@ -140,12 +143,13 @@
 			const list = await Api.get(`/cohort_users?cohort_id=${cohortId}`);
 			const seats = Array.isArray(list) ? list : [];
 			cohortMembers = seats
-				.filter(
-					(s) =>
-						s.user_id &&
-						String(s.user_id) !== String($user?.id) &&
-						(s.status === 'assigned' || s.status === 'applied')
-				)
+				.filter((s) => {
+					if (!s.user_id) return false;
+					if (!(s.status === 'assigned' || s.status === 'applied')) return false;
+					// Admin view-as list hides self; learner roster shows the full team.
+					if (isAdmin && String(s.user_id) === String($user?.id)) return false;
+					return true;
+				})
 				.sort((a, b) => {
 					const ao = a.status === 'assigned' ? 0 : 1;
 					const bo = b.status === 'assigned' ? 0 : 1;
@@ -456,9 +460,13 @@
 	}
 	$: if (isAdmin && primary?.cohort_id) {
 		loadPendingEvidenceCount(primary.cohort_id);
-		loadCohortMembers(primary.cohort_id);
 	} else if (!isAdmin) {
 		pendingEvidenceCount = 0;
+	}
+
+	$: if (showMembers && primary?.cohort_id) {
+		loadCohortMembers(primary.cohort_id);
+	} else {
 		cohortMembers = [];
 		cohortMembersLoadedFor = null;
 	}
@@ -602,8 +610,8 @@
 					</div>
 				{/if}
 
-				{#if dateDisplay?.kind !== 'empty' || primary.status === 'applied' || (isAdmin && (cohortMembers.length > 0 || cohortMembersLoading))}
-					<div class="seat-foot" class:seat-foot-admin={isAdmin}>
+				{#if dateDisplay?.kind !== 'empty' || primary.status === 'applied' || (showMembers && (cohortMembers.length > 0 || cohortMembersLoading))}
+					<div class="seat-foot" class:seat-foot-members={showMembers}>
 						{#if dateDisplay && dateDisplay.kind !== 'empty'}
 							<div class="stat dates-stat">
 								<span class="stat-label">Dates</span>
@@ -621,7 +629,7 @@
 								<span class="status status-applied">Pending</span>
 							</div>
 						{/if}
-						{#if isAdmin}
+						{#if showMembers}
 							<div class="members-block">
 								<div class="members-head">
 									<span class="stat-label">Members</span>
@@ -638,26 +646,47 @@
 								{:else}
 									<div class="members-scroll" role="list" aria-label="Cohort members">
 										{#each cohortMembers as seat (seat.id)}
-											<button
-												type="button"
-												class="member-chip"
-												role="listitem"
-												class:pending={seat.status === 'applied'}
-												class:selected={viewingAsSeat &&
-													String(viewingAsSeat.id) === String(seat.id)}
-												aria-pressed={viewingAsSeat &&
-													String(viewingAsSeat.id) === String(seat.id)}
-												title="View cohort as {memberLabel(seat)}"
-												on:click={() => viewAsMember(seat)}
-											>
-												<span class="member-name">{memberLabel(seat)}</span>
-												{#if seat.occupation_title}
-													<span class="member-role">{seat.occupation_title}</span>
-												{/if}
-												{#if seat.status === 'applied'}
-													<span class="member-status">Pending</span>
-												{/if}
-											</button>
+											{#if isAdmin}
+												<button
+													type="button"
+													class="member-chip"
+													role="listitem"
+													class:pending={seat.status === 'applied'}
+													class:selected={viewingAsSeat &&
+														String(viewingAsSeat.id) === String(seat.id)}
+													aria-pressed={viewingAsSeat &&
+														String(viewingAsSeat.id) === String(seat.id)}
+													title="View cohort as {memberLabel(seat)}"
+													on:click={() => viewAsMember(seat)}
+												>
+													<span class="member-name">{memberLabel(seat)}</span>
+													{#if seat.occupation_title}
+														<span class="member-role">{seat.occupation_title}</span>
+													{/if}
+													{#if seat.status === 'applied'}
+														<span class="member-status">Pending</span>
+													{/if}
+												</button>
+											{:else}
+												<div
+													class="member-chip"
+													role="listitem"
+													class:pending={seat.status === 'applied'}
+													class:is-you={String(seat.user_id) === String($user?.id)}
+												>
+													<span class="member-name">
+														{memberLabel(seat)}{#if String(seat.user_id) === String($user?.id)}
+															<span class="member-you">you</span>
+														{/if}
+													</span>
+													{#if seat.occupation_title}
+														<span class="member-role">{seat.occupation_title}</span>
+													{/if}
+													{#if seat.status === 'applied'}
+														<span class="member-status">Pending</span>
+													{/if}
+												</div>
+											{/if}
 										{/each}
 									</div>
 								{/if}
@@ -1280,7 +1309,7 @@
 		border-top: 1px solid rgba(7, 65, 68, 0.08);
 	}
 
-	.seat-foot-admin {
+	.seat-foot-members {
 		flex-wrap: nowrap;
 		align-items: flex-start;
 		gap: 1.25rem 1.5rem;
@@ -1434,8 +1463,22 @@
 		color: #a16207;
 	}
 
+	.member-chip.is-you {
+		border-color: rgba(10, 95, 99, 0.28);
+		background: rgba(10, 95, 99, 0.06);
+	}
+
+	.member-you {
+		margin-left: 0.35rem;
+		font-size: 0.62rem;
+		font-weight: 700;
+		letter-spacing: 0.06em;
+		text-transform: uppercase;
+		color: var(--accent);
+	}
+
 	@media (max-width: 640px) {
-		.seat-foot-admin {
+		.seat-foot-members {
 			flex-wrap: wrap;
 		}
 
