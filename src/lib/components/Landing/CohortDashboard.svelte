@@ -145,15 +145,15 @@
 			cohortMembers = seats
 				.filter((s) => {
 					if (!s.user_id) return false;
-					if (!(s.status === 'assigned' || s.status === 'applied')) return false;
-					// Admin view-as list hides self; learner roster shows the full team.
-					if (isAdmin && String(s.user_id) === String($user?.id)) return false;
-					return true;
+					return s.status === 'assigned' || s.status === 'applied';
 				})
 				.sort((a, b) => {
 					const ao = a.status === 'assigned' ? 0 : 1;
 					const bo = b.status === 'assigned' ? 0 : 1;
 					if (ao !== bo) return ao - bo;
+					const aYou = String(a.user_id) === String($user?.id) ? 0 : 1;
+					const bYou = String(b.user_id) === String($user?.id) ? 0 : 1;
+					if (aYou !== bYou) return aYou - bYou;
 					return String(memberLabel(a)).localeCompare(String(memberLabel(b)));
 				});
 			cohortMembersLoadedFor = cohortId;
@@ -186,6 +186,11 @@
 
 	function viewAsMember(seat) {
 		if (!isAdmin || !seat?.id) return;
+		// Own seat is shown in the roster but isn't a teacher view target.
+		if (String(seat.user_id) === String($user?.id)) {
+			if (viewingAsSeat) exitViewAs();
+			return;
+		}
 		if (viewingAsSeat && String(viewingAsSeat.id) === String(seat.id)) {
 			exitViewAs();
 			return;
@@ -652,14 +657,21 @@
 													class="member-chip"
 													role="listitem"
 													class:pending={seat.status === 'applied'}
+													class:is-you={String(seat.user_id) === String($user?.id)}
 													class:selected={viewingAsSeat &&
 														String(viewingAsSeat.id) === String(seat.id)}
 													aria-pressed={viewingAsSeat &&
 														String(viewingAsSeat.id) === String(seat.id)}
-													title="View cohort as {memberLabel(seat)}"
+													title={String(seat.user_id) === String($user?.id)
+														? 'Your seat'
+														: `View cohort as ${memberLabel(seat)}`}
 													on:click={() => viewAsMember(seat)}
 												>
-													<span class="member-name">{memberLabel(seat)}</span>
+													<span class="member-name">
+														{memberLabel(seat)}{#if String(seat.user_id) === String($user?.id)}
+															<span class="member-you">you</span>
+														{/if}
+													</span>
 													{#if seat.occupation_title}
 														<span class="member-role">{seat.occupation_title}</span>
 													{/if}
