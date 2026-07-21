@@ -37,6 +37,13 @@
 	/** Admin teacher view: selected learner seat (null = own/admin dashboard) */
 	/** @type {any|null} */
 	let viewingAsSeat = null;
+	let projectInfoOpen = false;
+	let projectDescriptionEditing = false;
+	let projectDescriptionDraft = '';
+	let projectDescriptionSaving = false;
+	let projectDescriptionError = '';
+	/** @type {number|string|null} */
+	let projectDescriptionSyncedFor = null;
 
 	const panelTabs = [
 		{ id: 'vocabulary', label: 'Vocabulary' },
@@ -192,6 +199,68 @@
 		const seat = memberships[0];
 		if (seat?.occupation_id) loadVocabulary(seat.occupation_id);
 		if (seat) loadUnresolvedCount(seat);
+	}
+
+	function syncProjectDescription(seat) {
+		const key = seat?.cohort_id != null ? String(seat.cohort_id) : null;
+		if (!key || projectDescriptionSyncedFor === key) return;
+		projectDescriptionDraft = seat?.cohort_description || '';
+		projectDescriptionError = '';
+		projectDescriptionEditing = false;
+		projectDescriptionSyncedFor = key;
+	}
+
+	function startEditProjectDescription() {
+		if (!canEditProjectDescription) return;
+		projectDescriptionDraft = primary?.cohort_description || projectDescriptionDraft || '';
+		projectDescriptionEditing = true;
+		projectDescriptionError = '';
+	}
+
+	function cancelEditProjectDescription() {
+		projectDescriptionDraft = primary?.cohort_description || '';
+		projectDescriptionEditing = false;
+		projectDescriptionError = '';
+	}
+
+	function applyLocalCohortDescription(cohortId, text) {
+		memberships = (memberships || []).map((m) =>
+			String(m.cohort_id) === String(cohortId) ? { ...m, cohort_description: text } : m
+		);
+		if (viewingAsSeat && String(viewingAsSeat.cohort_id) === String(cohortId)) {
+			viewingAsSeat = { ...viewingAsSeat, cohort_description: text };
+		}
+		cohortMembers = (cohortMembers || []).map((m) =>
+			String(m.cohort_id) === String(cohortId) ? { ...m, cohort_description: text } : m
+		);
+	}
+
+	$: canEditProjectDescription =
+		!!$user &&
+		!!primary?.cohort_id &&
+		(!!$user.admin || primary.status === 'assigned' || adminPreview);
+
+	async function saveProjectDescription() {
+		if (!primary?.cohort_id || !canEditProjectDescription || projectDescriptionSaving) return;
+		try {
+			projectDescriptionSaving = true;
+			projectDescriptionError = '';
+			const updated = await Api.patch(`/cohorts/${primary.cohort_id}/update_description`, {
+				cohort: { description: projectDescriptionDraft }
+			});
+			const text = updated?.description ?? projectDescriptionDraft;
+			projectDescriptionDraft = text;
+			applyLocalCohortDescription(primary.cohort_id, text);
+			projectDescriptionEditing = false;
+		} catch (err) {
+			projectDescriptionError =
+				err?.response?.data?.error ||
+				err?.response?.data?.errors?.join?.(', ') ||
+				err?.message ||
+				'Could not save description.';
+		} finally {
+			projectDescriptionSaving = false;
+		}
 	}
 
 	function firstName(u) {
@@ -364,6 +433,7 @@
 	}
 
 	$: primary = viewingAsSeat || memberships[0];
+	$: if (primary) syncProjectDescription(primary);
 	$: greetingName = firstName($user);
 	$: dateDisplay = primary
 		? formatDateRange(primary.cohort_start_date, primary.cohort_end_date)
@@ -405,7 +475,7 @@
 	/>
 </svelte:head>
 
-<section class="dashboard">
+<section class="dashboard" class:student-view={isTeacherViewing}>
 	<div class="wrap">
 		<h1>
 			Hi
@@ -440,7 +510,27 @@
 								Application pending for
 							{/if}
 						</p>
-						<h2 class="cohort-name">{primary.cohort_title || 'Your cohort'}</h2>
+						<div class="cohort-title-row">
+							<h2 class="cohort-name">{primary.cohort_title || 'Your cohort'}</h2>
+							<button
+								type="button"
+								class="project-info-btn"
+								class:open={projectInfoOpen}
+								aria-expanded={projectInfoOpen}
+								aria-controls="project-description"
+								title={projectInfoOpen ? 'Hide project info' : 'Project info'}
+								on:click={() => {
+									projectInfoOpen = !projectInfoOpen;
+									if (!projectInfoOpen) {
+										projectDescriptionEditing = false;
+										projectDescriptionError = '';
+										projectDescriptionDraft = primary?.cohort_description || '';
+									}
+								}}
+							>
+								i
+							</button>
+						</div>
 						{#if primary.cohort_subtitle}
 							<p class="cohort-sub">{primary.cohort_subtitle}</p>
 						{/if}
@@ -452,6 +542,65 @@
 						</div>
 					{/if}
 				</div>
+
+				{#if projectInfoOpen}
+					<div class="project-info" id="project-description">
+						<div class="project-info-head">
+							<span class="stat-label">Project description</span>
+							{#if canEditProjectDescription && !projectDescriptionEditing}
+								<button
+									type="button"
+									class="project-edit-btn"
+									title="Edit description"
+									aria-label="Edit project description"
+									on:click={startEditProjectDescription}
+								>
+									<i class="fa fa-pencil" aria-hidden="true" />
+								</button>
+							{/if}
+						</div>
+						{#if canEditProjectDescription && projectDescriptionEditing}
+							<textarea
+								class="project-desc-input"
+								rows="4"
+								placeholder="Add a shared description of this project…"
+								bind:value={projectDescriptionDraft}
+								disabled={projectDescriptionSaving}
+							/>
+							{#if projectDescriptionError}
+								<p class="project-desc-err">{projectDescriptionError}</p>
+							{/if}
+							<div class="project-desc-actions">
+								<button
+									type="button"
+									class="project-desc-save"
+									disabled={projectDescriptionSaving}
+									on:click={saveProjectDescription}
+								>
+									{projectDescriptionSaving ? 'Saving…' : 'Save description'}
+								</button>
+								<button
+									type="button"
+									class="project-desc-cancel"
+									disabled={projectDescriptionSaving}
+									on:click={cancelEditProjectDescription}
+								>
+									Cancel
+								</button>
+							</div>
+						{:else if (projectDescriptionDraft || primary?.cohort_description || '').trim()}
+							<p class="project-desc-body">
+								{projectDescriptionDraft || primary?.cohort_description}
+							</p>
+						{:else}
+							<p class="project-desc-empty">
+								No project description yet.{#if canEditProjectDescription}
+									{' '}Use the pen to add one.
+								{/if}
+							</p>
+						{/if}
+					</div>
+				{/if}
 
 				{#if dateDisplay?.kind !== 'empty' || primary.status === 'applied' || (isAdmin && (cohortMembers.length > 0 || cohortMembersLoading))}
 					<div class="seat-foot" class:seat-foot-admin={isAdmin}>
@@ -710,6 +859,16 @@
 			linear-gradient(165deg, #f7fbfa 0%, var(--paper) 45%, var(--sand) 100%);
 		padding: 4rem 1.5rem 5rem;
 		color: var(--ink);
+		transition: background 0.45s ease;
+	}
+
+	.dashboard.student-view {
+		--paper: #f7efe6;
+		--sand: #f0e0d0;
+		background:
+			radial-gradient(ellipse 90% 70% at 88% -10%, rgba(232, 145, 72, 0.18), transparent 52%),
+			radial-gradient(ellipse 70% 55% at 8% 100%, rgba(196, 110, 48, 0.1), transparent 50%),
+			linear-gradient(165deg, #fbf6f0 0%, #f5ebe0 42%, #edd9c6 100%);
 	}
 
 	.wrap {
@@ -903,6 +1062,13 @@
 		color: var(--accent);
 	}
 
+	.cohort-title-row {
+		display: flex;
+		align-items: center;
+		gap: 0.55rem;
+		min-width: 0;
+	}
+
 	.cohort-name {
 		margin: 0;
 		font-family: Fraunces, Georgia, serif;
@@ -912,6 +1078,158 @@
 		line-height: 1.15;
 		color: var(--ink);
 		text-align: left;
+	}
+
+	.project-info-btn {
+		flex-shrink: 0;
+		width: 1.55rem;
+		height: 1.55rem;
+		border-radius: 999px;
+		border: 1.5px solid rgba(10, 95, 99, 0.35);
+		background: transparent;
+		color: var(--accent-deep);
+		font-family: GreyCliffCF-Bold, system-ui, sans-serif;
+		font-size: 0.78rem;
+		font-weight: 700;
+		font-style: italic;
+		line-height: 1;
+		cursor: pointer;
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		padding: 0;
+		transition:
+			background 0.2s ease,
+			border-color 0.2s ease,
+			color 0.2s ease;
+	}
+
+	.project-info-btn:hover,
+	.project-info-btn.open {
+		background: rgba(10, 95, 99, 0.1);
+		border-color: var(--accent);
+		color: var(--accent);
+	}
+
+	.project-info {
+		display: flex;
+		flex-direction: column;
+		gap: 0.55rem;
+		padding: 0 1.75rem 1.2rem 1.9rem;
+		border-top: 1px solid rgba(7, 65, 68, 0.08);
+		background: rgba(10, 95, 99, 0.03);
+	}
+
+	.project-info-head {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		gap: 0.75rem;
+		padding-top: 0.85rem;
+	}
+
+	.project-edit-btn {
+		width: 1.7rem;
+		height: 1.7rem;
+		border: none;
+		border-radius: 6px;
+		background: transparent;
+		color: #0a5f63;
+		cursor: pointer;
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		padding: 0;
+	}
+
+	.project-edit-btn:hover {
+		background: rgba(10, 95, 99, 0.1);
+	}
+
+	.project-desc-input {
+		width: 100%;
+		box-sizing: border-box;
+		margin-top: 0.15rem;
+		padding: 0.7rem 0.8rem;
+		border: 1px solid rgba(7, 65, 68, 0.18);
+		border-radius: 10px;
+		font: inherit;
+		font-size: 0.92rem;
+		line-height: 1.45;
+		resize: vertical;
+		min-height: 5rem;
+		background: #fff;
+		color: var(--ink);
+	}
+
+	.project-desc-input:focus {
+		outline: none;
+		border-color: rgba(10, 95, 99, 0.45);
+		box-shadow: 0 0 0 3px rgba(10, 95, 99, 0.1);
+	}
+
+	.project-desc-body {
+		margin: 0.15rem 0 0;
+		font-size: 0.92rem;
+		line-height: 1.5;
+		color: var(--muted);
+		white-space: pre-wrap;
+		word-break: break-word;
+	}
+
+	.project-desc-empty {
+		margin: 0.15rem 0 0;
+		font-size: 0.88rem;
+		color: #5a7178;
+		font-style: italic;
+	}
+
+	.project-desc-err {
+		margin: 0;
+		font-size: 0.85rem;
+		color: #b02a37;
+	}
+
+	.project-desc-actions {
+		display: flex;
+		gap: 0.45rem;
+		align-items: center;
+	}
+
+	.project-desc-save {
+		align-self: flex-start;
+		border: none;
+		border-radius: 8px;
+		padding: 0.45rem 0.85rem;
+		background: #0a5f63;
+		color: #fff;
+		font-weight: 700;
+		font-size: 0.8rem;
+		cursor: pointer;
+	}
+
+	.project-desc-save:hover:not(:disabled) {
+		background: #084b4e;
+	}
+
+	.project-desc-save:disabled {
+		opacity: 0.6;
+		cursor: not-allowed;
+	}
+
+	.project-desc-cancel {
+		border: 1px solid rgba(7, 65, 68, 0.18);
+		border-radius: 8px;
+		padding: 0.45rem 0.85rem;
+		background: #fff;
+		color: #3a545c;
+		font-weight: 700;
+		font-size: 0.8rem;
+		cursor: pointer;
+	}
+
+	.project-desc-cancel:hover:not(:disabled) {
+		background: rgba(10, 95, 99, 0.04);
 	}
 
 	.cohort-sub {
